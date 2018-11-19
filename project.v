@@ -1,186 +1,122 @@
-// Every port labeled as fastclock should be connect to CLOCK_50
-// module project
-// 	(
-// 		CLOCK_50,						//	On Board 50 MHz
-// 		// Your inputs and outputs here
-//         KEY,
-//         SW,
-// 		// The ports below are for the VGA output.  Do not change.
-// 		VGA_CLK,   						//	VGA Clock
-// 		VGA_HS,							//	VGA H_SYNC
-// 		VGA_VS,							//	VGA V_SYNC
-// 		VGA_BLANK_N,						//	VGA BLANK
-// 		VGA_SYNC_N,						//	VGA SYNC
-// 		VGA_R,   						//	VGA Red[9:0]
-// 		VGA_G,	 						//	VGA Green[9:0]
-// 		VGA_B   						//	VGA Blue[9:0]
-// 	);
+//Every port labeled as fastclock should be connect to CLOCK_50
+module project
+	(
+		CLOCK_50,						//	On Board 50 MHz
+		// Your inputs and outputs here
+        KEY,
+        SW,
+		// The ports below are for the VGA output.  Do not change.
+		VGA_CLK,   						//	VGA Clock
+		VGA_HS,							//	VGA H_SYNC
+		VGA_VS,							//	VGA V_SYNC
+		VGA_BLANK_N,						//	VGA BLANK
+		VGA_SYNC_N,						//	VGA SYNC
+		VGA_R,   						//	VGA Red[9:0]
+		VGA_G,	 						//	VGA Green[9:0]
+		VGA_B   						//	VGA Blue[9:0]
+	);
 
-// 	input			CLOCK_50;				//	50 MHz
-// 	input   [9:0]   SW;
-// 	input   [3:0]   KEY;
+	input			CLOCK_50;				//	50 MHz
+	input   [9:0]   SW;
+	input   [3:0]   KEY;
 
-// 	// Declare your inputs and outputs here
-// 	// Do not change the following outputs
-// 	output			VGA_CLK;   				//	VGA Clock
-// 	output			VGA_HS;					//	VGA H_SYNC
-// 	output			VGA_VS;					//	VGA V_SYNC
-// 	output			VGA_BLANK_N;				//	VGA BLANK
-// 	output			VGA_SYNC_N;				//	VGA SYNC
-// 	output	[9:0]	VGA_R;   				//	VGA Red[9:0]
-// 	output	[9:0]	VGA_G;	 				//	VGA Green[9:0]
-// 	output	[9:0]	VGA_B;   				//	VGA Blue[9:0]
+	// Declare your inputs and outputs here
+	// Do not change the following outputs
+	output			VGA_CLK;   				//	VGA Clock
+	output			VGA_HS;					//	VGA H_SYNC
+	output			VGA_VS;					//	VGA V_SYNC
+	output			VGA_BLANK_N;				//	VGA BLANK
+	output			VGA_SYNC_N;				//	VGA SYNC
+	output	[9:0]	VGA_R;   				//	VGA Red[9:0]
+	output	[9:0]	VGA_G;	 				//	VGA Green[9:0]
+	output	[9:0]	VGA_B;   				//	VGA Blue[9:0]
 	
-// 	wire resetn;
-// 	assign resetn = KEY[0];
+	wire resetn;
+	assign resetn = SW[0];
 	
-// 	// Create the colour, x, y and writeEn wires that are inputs to the controller.
-// 	wire [2:0] colour;
-// 	wire [7:0] x;
-// 	wire [6:0] y;
-// 	wire writeEn;
+	// Create the colour, x, y and writeEn wires that are inputs to the controller.
+	wire [2:0] colour;
+	wire [7:0] x;
+	wire [6:0] y;
+	wire writeEn;
 
-// 	// Create an Instance of a VGA controller - there can be only one!
-// 	// Define the number of colours as well as the initial background
-// 	// image file (.MIF) for the controller.
-// 	vga_adapter VGA(
-// 			.resetn(resetn),
-// 			.clock(CLOCK_50),
-// 			.colour(colour),
-// 			.x(x),
-// 			.y(y),
-// 			.plot(writeEn),
-// 			/* Signals for the DAC to drive the monitor. */
-// 			.VGA_R(VGA_R),
-// 			.VGA_G(VGA_G),
-// 			.VGA_B(VGA_B),
-// 			.VGA_HS(VGA_HS),
-// 			.VGA_VS(VGA_VS),
-// 			.VGA_BLANK(VGA_BLANK_N),
-// 			.VGA_SYNC(VGA_SYNC_N),
-// 			.VGA_CLK(VGA_CLK));
-// 		defparam VGA.RESOLUTION = "160x120";
-// 		defparam VGA.MONOCHROME = "FALSE";
-// 		defparam VGA.BITS_PER_COLOUR_CHANNEL = 1;
-// 		defparam VGA.BACKGROUND_IMAGE = "black.mif";
+	// Create an Instance of a VGA controller - there can be only one!
+	// Define the number of colours as well as the initial background
+	// image file (.MIF) for the controller.
+	vga_adapter VGA(
+			.resetn(resetn),
+			.clock(CLOCK_50),
+			.colour(colour),
+			.x(x),
+			.y(y),
+			.plot(writeEn),
+			/* Signals for the DAC to drive the monitor. */
+			.VGA_R(VGA_R),
+			.VGA_G(VGA_G),
+			.VGA_B(VGA_B),
+			.VGA_HS(VGA_HS),
+			.VGA_VS(VGA_VS),
+			.VGA_BLANK(VGA_BLANK_N),
+			.VGA_SYNC(VGA_SYNC_N),
+			.VGA_CLK(VGA_CLK));
+		defparam VGA.RESOLUTION = "160x120";
+		defparam VGA.MONOCHROME = "FALSE";
+		defparam VGA.BITS_PER_COLOUR_CHANNEL = 1;
+		defparam VGA.BACKGROUND_IMAGE = "black.mif";
 			
-// 	// Put your code here. Your code should produce signals x,y,colour and writeEn/plot
-// 	// for the VGA controller, in addition to any other functionality your design may require.
-    
-//     // Instansiate datapath
-// 	// datapath d0(...);
-
-//     // Instansiate FSM control
-//     // control c0(...);
-    
-// endmodule
-
-module project(KEY, HEX0, HEX1, CLOCK_50, SW);
-    input [3:0] KEY;
-    input [9:0] SW;
-    input CLOCK_50;
-    output [6:0] HEX0, HEX1;
-
-    wire [2:0] xcoor, ycoor;
-
-    frogDataControl dp(
+	// Put your code here. Your code should produce signals x,y,colour and writeEn/plot
+	// for the VGA controller, in addition to any other functionality your design may require.
+    wire counter_reset, count_complete, erase;
+    wire up, down, right, left;
+    frogData fd(
         .fastclock(CLOCK_50),
-        .resetn(SW[0]),
-        .up(~KEY[3]),
-        .down(~KEY[2]),
-        .left(~KEY[1]),
-        .right(~KEY[0]),
-        .xpos(xcoor),
-        .ypos(ycoor)
-    );
-
-    hex hex0(
-        .HEX(HEX0),
-        .x({1'b0, xcoor})
-    );
-
-    hex hex1(
-        .HEX(HEX1),
-        .x({1'b0, ycoor})
-    );
-
-endmodule
-
-module drawFrog(fastclock, xin, yin, colourIn, xout, yout, colourOut, resetn);
-    input fastclock, resetn;
-    input [7:0] xin;
-    input [6:0] yin;
-    input [2:0] colourIn;
-    output [7:0] xout;
-    output [6:0] yout;
-    output [2:0] colourOut;
-    
-    reg [5:0] counter;
-
-    always @(posedge fastclock)
-    begin
-        if (!resetn)
-            counter <= 6'b0000_00;
-        else 
-            counter <= counter + 1;
-    end
-    assign coloutOut = colourIn;
-    assign xout = xin + counter[2:0];
-    assign yout = yin + counter[5:3];
-
-endmodule
-
-// module drawTrafficLine(fastclock, lineNum, colourIn, q, xout, yout);
-//     input fastclock;
-//     input [2:0] lineNum;
-//     input [15:0] q;
-//     input [2:0] colourIn;
-//     output [7:0] xout;
-//     output [6:0] yout;
-
-//     reg [6:0] ycoor = lineNum * 15;
-    
-
-
-// endmodule
-
-module frogDataControl(fastclock, resetn, up, down, left, right, xpos, ypos);
-    input fastclock, resetn, up, down, left, right;
-    output [2:0] xpos, ypos;
-
-    wire leftwire, rightwire, upwire, downwire;
-
-    frogControl frogControlInstance(
-        .fastclock(fastclock),
-        .upin(up),
-        .downin(down),
-        .leftin(left),
-        .rightin(right),
-        .left(leftwire),
-        .right(rightwire),
-        .up(upwire),
-        .down(downwire),
-        .resetn(resetn)
-    );
-
-    frogData frogdataInstance(
-        .fastclock(fastclock),
         .resetn(resetn),
-        .up(upwire),
-        .down(downwire),
-        .left(leftwire),
-        .right(rightwire),
-        .xpos(xpos),
-        .ypos(ypos)
+        .up(up),
+        .down(down),
+        .left(left),
+        .right(right),
+        .x(x),
+        .y(y),
+        .counter_reset(counter_reset),
+        .count_complete(count_complete),
+        .erase(erase),
+        .colour(colour),
+        .colourIn(3'b111)
     );
 
+    frogControl fc(
+        .fastclock(CLOCK_50),
+        .upin(~KEY[3]),
+        .downin(~KEY[2]),
+        .leftin(~KEY[1]),
+        .rightin(~KEY[0]),
+        .up(up),
+        .down(down),
+        .left(left),
+        .right(right),
+        .resetn(resetn),
+        .counter_reset(counter_reset),
+        .count_complete(count_complete),
+        .erase(erase),
+        .writeEn(writeEn)
+    );
+
+
+    
 endmodule
 
-module frogData(fastclock, resetn, up, down, left, right, xpos, ypos);
-    input resetn, up, down, left, right, fastclock;
+module frogData(fastclock, resetn, up, down, left, right, x, y, counter_reset,
+count_complete, erase, colour, colourIn);
+    input resetn, up, down, left, right, fastclock, counter_reset;
+    output count_complete;
+    output [2:0] colour;
+    input erase;
+    input [2:0] colourIn;
+    output [7:0] x;
+    output [6:0] y;
     // xpos and ypos are index of the grid the frog is in
-    output reg [3:0] xpos;
-    output reg [2:0] ypos;
+    reg [3:0] xpos;
+    reg [2:0] ypos;
 
     always @(posedge fastclock)
     begin
@@ -199,80 +135,118 @@ module frogData(fastclock, resetn, up, down, left, right, xpos, ypos);
             xpos <= xpos + 1'b1;
 		  end
     end
+    drawFrog df(
+        .fastclock(fastclock),
+        .xin(xpos * 10),
+        .yin(ypos * 15),
+        .colourIn(colourIn),
+        .resetn(resetn),
+        .colourOut(colour),
+        .counter_reset(counter_reset),
+        .count_complete(count_complete),
+        .erase(erase)
+    );
 
 endmodule
 
 module frogControl(fastclock, upin, downin, leftin, rightin, left, right,
-up, down, resetn);
-    input fastclock, upin, downin, leftin, rightin, resetn;
-    output left, right, up, down;
+up, down, resetn, counter_reset, count_complete, erase, writeEn);
 
-    frogPartiallControl upControl(
-        .fastclock(fastclock),
-        .in(upin),
-        .out(up),
-        .resetn(resetn)
-    );
+    input fastclock, upin, downin, leftin, rightin, resetn, count_complete;
+    output reg left, right, up, down, counter_reset, erase, writeEn;
+    wire change;
 
-    frogPartiallControl downControl(
-        .fastclock(fastclock),
-        .in(downin),
-        .out(down),
-        .resetn(resetn)
-    );
-
-    frogPartiallControl leftControl(
-        .fastclock(fastclock),
-        .in(leftin),
-        .out(left),
-        .resetn(resetn)
-    );
-
-    frogPartiallControl rightControl(
-        .fastclock(fastclock),
-        .in(rightin),
-        .out(right),
-        .resetn(resetn)
-    );
-
-endmodule
-
-// Control module for each direction in up, down, left and right
-module frogPartiallControl(fastclock, in, out, resetn);
-    input fastclock, in, resetn;
-    output reg out;
+    assign change = upin || downin || leftin || rightin;
 
     reg [3:0] current_state, next_state;
-
-    localparam s_wait   = 4'd0,
-               s_press1 = 4'd1,
-               s_inter  = 4'd2;
-			
     
+    localparam s_wait            = 4'd0,
+               s_inter           = 4'd1,
+               s_erase           = 4'd2,
+               s_move            = 4'd3,
+               s_clear_counter1  = 4'd4,
+               s_draw            = 4'd5,
+               s_clear_counter2  = 4'd6,
+               s_update          = 4'd7,
+               s_plot            = 4'd8;
+
     always @(*)
-    begin: state_table
+    begin
         case (current_state)
-            s_wait:   next_state = in ? s_inter : s_wait;
-            s_press1:  next_state = s_wait;
-            s_inter : next_state = in ? s_inter : s_press1;
+            s_wait: next_state = change ? s_clear_counter1 : s_wait;
+            s_clear_counter1: next_state = s_erase;
+            s_erase: next_state = count_complete ? s_update : s_erase;
+            s_update: next_state = s_clear_counter2;
+            s_clear_counter2: next_state = s_draw;
+            s_draw: next_state = count_complete ? s_plot : s_draw;
+            s_plot: next_state = s_inter;
+            s_inter: next_state = change ? s_inter : s_wait;
         endcase
     end
 
     always @(*)
     begin: enable_signals
-        out = 1'b0;
+        counter_reset = 0;
+        left = 0;
+        right = 0;
+        up = 0;
+        down = 0;
+        erase = 0;
+        writeEn = 0;
+
         case(current_state)
-            s_press1: out = 1'b1;
+            s_wait : counter_reset = 0;
+            s_clear_counter1: counter_reset = 0;
+            s_erase: erase = 1;
+            s_update: begin
+                if (upin == 1'b1) up = 1;
+                if (downin == 1'b1) down = 1;
+                if (leftin == 1'b1) left = 1;
+                if (rightin == 1'b1) right = 1;
+            end
+            s_clear_counter2: counter_reset = 1;
+            s_plot: writeEn = 1;
         endcase
     end
 
     always @(posedge fastclock)
-    begin: state_FFs
+    begin state_FFs:
         if (!resetn)
             current_state <= s_wait;
         else
             current_state <= next_state;
     end
+
+endmodule
+
+module drawFrog(fastclock, xin, yin, colourIn, xout, yout, colourOut, resetn,
+counter_reset, count_complete, erase);
+    input fastclock, resetn, counter_reset, erase;
+    input [7:0] xin;
+    input [6:0] yin;
+    input [2:0] colourIn;
+    output [7:0] xout;
+    output [6:0] yout;
+    output [2:0] colourOut;
+    output count_complete;
+    
+    reg [5:0] counter;
+
+    always @(posedge fastclock)
+    begin
+        if (!resetn)
+            counter <= 6'b0000_00;
+        else begin
+            if (counter_reset == 1'b1)
+                counter <= 6'b0000_00;
+            else
+                counter <= counter + 1;
+        end
+    end
+    assign count_complete = (counter == 6'b1111_11) ? 1 : 0;
+    assign coloutOut = erase ? 3'b000 : colourIn;
+    assign xout = xin + counter[2:0];
+    assign yout = yin + counter[5:3];
 
 endmodule
 
