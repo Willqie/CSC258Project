@@ -141,14 +141,14 @@ endmodule
 module frogData(fastclock, resetn, up, down, left, right, xpos, ypos);
     input resetn, up, down, left, right, fastclock;
     // xpos and ypos are index of the grid the frog is in
-    output reg [2:0] xpos;
+    output reg [3:0] xpos;
     output reg [2:0] ypos;
 
     always @(posedge fastclock)
     begin
         if (resetn == 1'b0) begin
             ypos <= 3'd6;
-            xpos <= 3'd4;
+            xpos <= 4'd8;
         end
 		  else begin
 			if (up == 1'b1) 
@@ -238,137 +238,225 @@ module frogPartiallControl(fastclock, in, out, resetn);
 
 endmodule
 
-module hex_decoder(hex_digit, segments);
-    input [3:0] hex_digit;
-    output reg [6:0] segments;
-   
-    always @(*)
-        case (hex_digit)
-            4'h0: segments = 7'b100_0000;
-            4'h1: segments = 7'b111_1001;
-            4'h2: segments = 7'b010_0100;
-            4'h3: segments = 7'b011_0000;
-            4'h4: segments = 7'b001_1001;
-            4'h5: segments = 7'b001_0010;
-            4'h6: segments = 7'b000_0010;
-            4'h7: segments = 7'b111_1000;
-            4'h8: segments = 7'b000_0000;
-            4'h9: segments = 7'b001_1000;
-            4'hA: segments = 7'b000_1000;
-            4'hB: segments = 7'b000_0011;
-            4'hC: segments = 7'b100_0110;
-            4'hD: segments = 7'b010_0001;
-            4'hE: segments = 7'b000_0110;
-            4'hF: segments = 7'b000_1110;   
-            default: segments = 7'h7f;
-        endcase
+module trafficData(fastclock, resetn, q1, q2, q3, q4,q5);
+    input fastclock, resetn;
+    output [15:0] q1, q2, q3, q4, q5;
+
+    wire clock;
+    halfSecond halfSecondCounter(
+        .fastclock(fastclock),
+        .resetn(resetn),
+        .signal(clock)
+    );
+
+    shiftRegister line1(
+        .fastclock(fastclock),
+        .clock(clock),
+        .q(q1),
+        .init_val(16'b0000_0011_0001_1100), // Pseudo-random
+        .resetn(resetn)
+    );
+
+    shiftRegister line2(
+        .fastclock(fastclock),
+        .clock(clock),
+        .q(q2),
+        .init_val(16'b1100_0011_0001_0010),
+        .resetn(resetn)
+    );
+
+    shiftRegister line3(
+        .fastclock(fastclock),
+        .clock(clock),
+        .q(q3),
+        .init_val(16'b0011_0011_0001_1011),
+        .resetn(resetn)
+    );
+
+    shiftRegister line4(
+        .fastclock(fastclock),
+        .clock(clock),
+        .q(q4),
+        .init_val(16'b0110_0011_1001_1000),
+        .resetn(resetn)
+    );
+
+    shiftRegister line5(
+        .fastclock(fastclock),
+        .clock(clock),
+        .q(q5),
+        .init_val(16'b0111_0010_0000_1100),
+        .resetn(resetn)
+    );
+
+endmodule
+
+// Traffic should move every half second
+module halfSecond(fastclock, resetn, signal);
+    input fastclock, resetn;
+    output signal;
+
+    reg [25:0] counter;
+
+    always @(posedge fastclock)
+    begin
+        if (!resetn)
+            counter <= 26'd25_000_000;
+        else
+            counter <= counter - 1;
+    end
+
+    assign signal = (counter == 0) ? 1 : 0;
+
+endmodule
+
+// 15-bit width shifter
+module shiftRegister(fastclock, clock, q, init_val, resetn);
+    input resetn, fastclock, clock; // clock should be half second clock!
+    input [15:0] init_val;
+    output reg [15:0] q;
+
+    always @(posedge fastclock)
+    begin
+        if (!resetn) 
+            q <= init_val;
+    end
+
+    always @(posedge clock)
+    begin 
+        q <= {q[14:0], q[15]};
+    end
+endmodule
+
+module hex(HEX, x);
+   input [3:0] x;
+   output [6: 0] HEX;
+
+   Hex0 h0(
+       .y(HEX[0]),
+       .c3(x[3]),
+       .c2(x[2]),
+       .c1(x[1]),
+       .c0(x[0])
+   );
+   Hex1 h1(
+       .y(HEX[1]),
+       .c3(x[3]),
+       .c2(x[2]),
+       .c1(x[1]),
+       .c0(x[0])
+   );
+   Hex2 h2(
+       .y(HEX[2]),
+       .c3(x[3]),
+       .c2(x[2]),
+       .c1(x[1]),
+       .c0(x[0])
+   );
+   Hex3 h3(
+       .y(HEX[3]),
+       .c3(x[3]),
+       .c2(x[2]),
+       .c1(x[1]),
+       .c0(x[0])
+   );
+   Hex4 h4(
+       .y(HEX[4]),
+       .c3(x[3]),
+       .c2(x[2]),
+       .c1(x[1]),
+       .c0(x[0])
+   );
+   Hex5 h5(
+       .y(HEX[5]),
+       .c3(x[3]),
+       .c2(x[2]),
+       .c1(x[1]),
+       .c0(x[0])
+   );
+   Hex6 h6(
+       .y(HEX[6]),
+       .c3(x[3]),
+       .c2(x[2]),
+       .c1(x[1]),
+       .c0(x[0])
+   );
+
+
 endmodule
 
 
 
-//module hex(HEX, x);
-//    input [3:0] x;
-//    output [6: 0] HEX;
-//
-//    Hex0 h0(
-//        .y(HEX[0]),
-//        .c3(x[3]),
-//        .c2(x[2]),
-//        .c1(x[1]),
-//        .c0(x[0])
-//    );
-//    Hex1 h1(
-//        .y(HEX[1]),
-//        .c3(x[3]),
-//        .c2(x[2]),
-//        .c1(x[1]),
-//        .c0(x[0])
-//    );
-//    Hex2 h2(
-//        .y(HEX[2]),
-//        .c3(x[3]),
-//        .c2(x[2]),
-//        .c1(x[1]),
-//        .c0(x[0])
-//    );
-//    Hex3 h3(
-//        .y(HEX[3]),
-//        .c3(x[3]),
-//        .c2(x[2]),
-//        .c1(x[1]),
-//        .c0(x[0])
-//    );
-//    Hex4 h4(
-//        .y(HEX[4]),
-//        .c3(x[3]),
-//        .c2(x[2]),
-//        .c1(x[1]),
-//        .c0(x[0])
-//    );
-//    Hex5 h5(
-//        .y(HEX[5]),
-//        .c3(x[3]),
-//        .c2(x[2]),
-//        .c1(x[1]),
-//        .c0(x[0])
-//    );
-//    Hex6 h6(
-//        .y(HEX[6]),
-//        .c3(x[3]),
-//        .c2(x[2]),
-//        .c1(x[1]),
-//        .c0(x[0])
-//    );
-//
-//
-//endmodule
-//
-//
-//
-//module Hex0(y, c3, c2, c1, c0);
-//    output y;
-//    input c3, c2, c1, c0;
-//    assign y = ~((c1 & ~c0) | (~c3 & c1) | (c3 & ~c1 & ~c0) | (c0 & ~c3 & c2) | (~c2 & ~c1 & ~c0) | (c1 & c3 & c2) | (~c1 & c3 & ~c2));
-//
-//endmodule
-//
-//module Hex1(y, c3, c2, c1, c0);
-//    output y;
-//    input c3, c2, c1, c0;
-//    assign y = ~((~c3 & ~c2) | ( ~c1 & ~c2) | (~c2 & c1 & ~c0) | (~c3 & c1 & c0) | (c3 & c0 & ~c1) | ( ~c3 & ~c1 & ~c0));
-//
-//endmodule
-//
-//module Hex2(y, c3, c2, c1, c0);
-//    output y;
-//    input c3, c2, c1, c0;
-//    assign y = ~(~c1 & c0 | ~c3 & c2 | c3 & ~c2 | ~c1 & ~c3 | ~c3 & c0);
-//endmodule
-//
-//module Hex3(y, c3, c2, c1, c0);
-//    output y;
-//    input c3, c2, c1, c0;
-//    assign y = ~(c3 & ~c1 & ~c0 | ~c1 & c2 & c0 | c1 & ~c3 & ~c2 | c2 & c1 & ~c0 | ~c2 & c1 & c0 | ~c2 & ~c1 & ~c0);
-//
-//endmodule
-//
-//module Hex4(y, c3, c2, c1, c0);
-//    output y;
-//    input c3, c2, c1, c0;
-//    assign y = ~(c1 & ~c0 | c3 & c2 | c1 & c3 | ~c2 & ~c1 & ~c0);
-//
-//endmodule
-//
-//module Hex5(y, c3, c2, c1, c0);
-//    output y;
-//    input c3, c2, c1, c0;
-//    assign y =~( ~c1 & ~c0 | c3 & ~c2 | ~c0 & c2 & c1 | c1 & c2 & c3 | c2 & ~c1 & ~c3);
-//
-//endmodule
-//
-//module Hex6(y, c3, c2, c1, c0);
-//    output y;
-//    input c3, c2, c1, c0;
-//    assign y = ~(c3 & ~c2 | c1 & ~c0 | c0 & c3 | ~c3 & c2 & ~c1 | c1 & ~c3 & ~c2);
-//
-//endmodule
+module Hex0(y, c3, c2, c1, c0);
+   output y;
+   input c3, c2, c1, c0;
+   assign y = ~((c1 & ~c0) | (~c3 & c1) | (c3 & ~c1 & ~c0) | (c0 & ~c3 & c2) | (~c2 & ~c1 & ~c0) | (c1 & c3 & c2) | (~c1 & c3 & ~c2));
+
+endmodule
+
+module Hex1(y, c3, c2, c1, c0);
+   output y;
+   input c3, c2, c1, c0;
+   assign y = ~((~c3 & ~c2) | ( ~c1 & ~c2) | (~c2 & c1 & ~c0) | (~c3 & c1 & c0) | (c3 & c0 & ~c1) | ( ~c3 & ~c1 & ~c0));
+
+endmodule
+
+module Hex2(y, c3, c2, c1, c0);
+   output y;
+   input c3, c2, c1, c0;
+   assign y = ~(~c1 & c0 | ~c3 & c2 | c3 & ~c2 | ~c1 & ~c3 | ~c3 & c0);
+endmodule
+
+module Hex3(y, c3, c2, c1, c0);
+   output y;
+   input c3, c2, c1, c0;
+   assign y = ~(c3 & ~c1 & ~c0 | ~c1 & c2 & c0 | c1 & ~c3 & ~c2 | c2 & c1 & ~c0 | ~c2 & c1 & c0 | ~c2 & ~c1 & ~c0);
+
+endmodule
+
+module Hex4(y, c3, c2, c1, c0);
+   output y;
+   input c3, c2, c1, c0;
+   assign y = ~(c1 & ~c0 | c3 & c2 | c1 & c3 | ~c2 & ~c1 & ~c0);
+
+endmodule
+
+module Hex5(y, c3, c2, c1, c0);
+   output y;
+   input c3, c2, c1, c0;
+   assign y =~( ~c1 & ~c0 | c3 & ~c2 | ~c0 & c2 & c1 | c1 & c2 & c3 | c2 & ~c1 & ~c3);
+
+endmodule
+
+module Hex6(y, c3, c2, c1, c0);
+   output y;
+   input c3, c2, c1, c0;
+   assign y = ~(c3 & ~c2 | c1 & ~c0 | c0 & c3 | ~c3 & c2 & ~c1 | c1 & ~c3 & ~c2);
+
+endmodule
+
+// module hex_decoder(hex_digit, segments);
+//     input [3:0] hex_digit;
+//     output reg [6:0] segments;
+   
+//     always @(*)
+//         case (hex_digit)
+//             4'h0: segments = 7'b100_0000;
+//             4'h1: segments = 7'b111_1001;
+//             4'h2: segments = 7'b010_0100;
+//             4'h3: segments = 7'b011_0000;
+//             4'h4: segments = 7'b001_1001;
+//             4'h5: segments = 7'b001_0010;
+//             4'h6: segments = 7'b000_0010;
+//             4'h7: segments = 7'b111_1000;
+//             4'h8: segments = 7'b000_0000;
+//             4'h9: segments = 7'b001_1000;
+//             4'hA: segments = 7'b000_1000;
+//             4'hB: segments = 7'b000_0011;
+//             4'hC: segments = 7'b100_0110;
+//             4'hD: segments = 7'b010_0001;
+//             4'hE: segments = 7'b000_0110;
+//             4'hF: segments = 7'b000_1110;   
+//             default: segments = 7'h7f;
+//         endcase
+// endmodule
