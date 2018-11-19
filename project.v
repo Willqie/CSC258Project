@@ -106,6 +106,44 @@ module project(KEY, HEX0, HEX1, CLOCK_50, SW);
 
 endmodule
 
+module drawFrog(fastclock, xin, yin, colourIn, xout, yout, colourOut, resetn);
+    input fastclock, resetn;
+    input [7:0] xin;
+    input [6:0] yin;
+    input [2:0] colourIn;
+    output [7:0] xout;
+    output [6:0] yout;
+    output [2:0] colourOut;
+    
+    reg [5:0] counter;
+
+    always @(posedge fastclock)
+    begin
+        if (!resetn)
+            counter <= 6'b0000_00;
+        else 
+            counter <= counter + 1;
+    end
+    assign coloutOut = colourIn;
+    assign xout = xin + counter[2:0];
+    assign yout = yin + counter[5:3];
+
+endmodule
+
+// module drawTrafficLine(fastclock, lineNum, colourIn, q, xout, yout);
+//     input fastclock;
+//     input [2:0] lineNum;
+//     input [15:0] q;
+//     input [2:0] colourIn;
+//     output [7:0] xout;
+//     output [6:0] yout;
+
+//     reg [6:0] ycoor = lineNum * 15;
+    
+
+
+// endmodule
+
 module frogDataControl(fastclock, resetn, up, down, left, right, xpos, ypos);
     input fastclock, resetn, up, down, left, right;
     output [2:0] xpos, ypos;
