@@ -208,15 +208,14 @@ module frogPartiallControl(fastclock, in, out, resetn);
 
     localparam s_wait   = 4'd0,
                s_press1 = 4'd1,
-               s_inter  = 4'd2,
-					s_press2 = 4'd3;
+               s_inter  = 4'd2;
+			
     
     always @(*)
     begin: state_table
         case (current_state)
             s_wait:   next_state = in ? s_inter : s_wait;
-            s_press1:  next_state = s_press2;
-				s_press2:  next_state = s_wait;
+            s_press1:  next_state = s_wait;
             s_inter : next_state = in ? s_inter : s_press1;
         endcase
     end
@@ -226,7 +225,6 @@ module frogPartiallControl(fastclock, in, out, resetn);
         out = 1'b0;
         case(current_state)
             s_press1: out = 1'b1;
-				s_press2: out = 1'b1;
         endcase
     end
 
