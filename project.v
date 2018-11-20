@@ -101,17 +101,62 @@ module project
         .writeEn(writeEn)
     );
 
+endmodule
 
-    
+module test(fastclock, upin, downin, leftin, rightin, x, y, writeEn, colour, resetn);
+    input fastclock, upin, downin, leftin, rightin, resetn;
+    output writeEn;
+    output [7:0] x;
+    output [6:0] y;
+    output [2:0] colour;
+
+    wire counter_reset, count_complete, erase;
+    wire up, down, right, left;
+    frogData fd(
+        .fastclock(fastclock),
+        .resetn(resetn),
+        .up(up),
+        .down(down),
+        .left(left),
+        .right(right),
+        .x(x),
+        .y(y),
+        .counter_reset(counter_reset),
+        .count_complete(count_complete),
+        .erase(erase),
+        .colour(colour),
+        .colourIn(3'b111)
+    );
+
+    frogControl fc(
+        .fastclock(fastclock),
+        .upin(upin),
+        .downin(downin),
+        .leftin(leftin),
+        .rightin(rightin),
+        .up(up),
+        .down(down),
+        .left(left),
+        .right(right),
+        .resetn(resetn),
+        .counter_reset(counter_reset),
+        .count_complete(count_complete),
+        .erase(erase),
+        .writeEn(writeEn)
+    );
+
+
+
+
 endmodule
 
 module frogData(fastclock, resetn, up, down, left, right, x, y, counter_reset,
 count_complete, erase, colour, colourIn);
     input resetn, up, down, left, right, fastclock, counter_reset;
-    output count_complete;
-    output [2:0] colour;
     input erase;
     input [2:0] colourIn;
+    output count_complete;
+    output [2:0] colour;
     output [7:0] x;
     output [6:0] y;
     // xpos and ypos are index of the grid the frog is in
@@ -121,8 +166,9 @@ count_complete, erase, colour, colourIn);
     always @(posedge fastclock)
     begin
         if (resetn == 1'b0) begin
-            ypos <= 3'd6;
-            xpos <= 4'd8;
+        // REVERT THIS
+            ypos <= 3'd0;
+            xpos <= 4'd0;
         end
 		  else begin
 			if (up == 1'b1) 
@@ -144,7 +190,9 @@ count_complete, erase, colour, colourIn);
         .colourOut(colour),
         .counter_reset(counter_reset),
         .count_complete(count_complete),
-        .erase(erase)
+        .erase(erase),
+        .xout(x),
+        .yout(y)
     );
 
 endmodule
@@ -196,7 +244,7 @@ up, down, resetn, counter_reset, count_complete, erase, writeEn);
 
         case(current_state)
             s_wait : counter_reset = 0;
-            s_clear_counter1: counter_reset = 0;
+            s_clear_counter1: counter_reset = 1;
             s_erase: erase = 1;
             s_update: begin
                 if (upin == 1'b1) up = 1;
@@ -210,7 +258,7 @@ up, down, resetn, counter_reset, count_complete, erase, writeEn);
     end
 
     always @(posedge fastclock)
-    begin state_FFs:
+    begin
         if (!resetn)
             current_state <= s_wait;
         else
@@ -244,7 +292,7 @@ counter_reset, count_complete, erase);
         end
     end
     assign count_complete = (counter == 6'b1111_11) ? 1 : 0;
-    assign coloutOut = erase ? 3'b000 : colourIn;
+    assign colourOut = erase ? 1'b0 : colourIn;
     assign xout = xin + counter[2:0];
     assign yout = yin + counter[5:3];
 
