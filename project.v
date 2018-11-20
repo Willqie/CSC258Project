@@ -66,41 +66,66 @@ module project
 			
 	// Put your code here. Your code should produce signals x,y,colour and writeEn/plot
 	// for the VGA controller, in addition to any other functionality your design may require.
-    wire counter_reset, count_complete, erase;
-    wire up, down, right, left, load;
-    frogData fd(
+    wire counter_reset, count_complete, incr_x, incr_y, load;
+    
+    trafficData td(
         .fastclock(CLOCK_50),
         .resetn(resetn),
-        .up(up),
-        .down(down),
-        .left(left),
-        .right(right),
         .x(x),
         .y(y),
-        .counter_reset(counter_reset),
-        .count_complete(count_complete),
-        .erase(erase),
         .colour(colour),
-        .colourIn(3'b111),
-        .load(load)
+        .colourIn(3'b110),
+        .incr_x(incr_x),
+        .incr_y(incr_y),
+        .load(load),
+        .count_complete(count_complete),
+        .counter_reset(counter_reset)
     );
 
-    frogControl fc(
+    trafficControl tc(
         .fastclock(CLOCK_50),
-        .upin(~KEY[3]),
-        .downin(~KEY[2]),
-        .leftin(~KEY[1]),
-        .rightin(~KEY[0]),
-        .up(up),
-        .down(down),
-        .left(left),
-        .right(right),
-        .resetn(resetn),
-        .counter_reset(counter_reset),
         .count_complete(count_complete),
-        .erase(erase),
-        .writeEn(writeEn),
-        .load(load)
+        .counter_reset(counter_reset),
+        .resetn(resetn),
+        .incr_x(incr_x),
+        .incr_y(incr_y),
+        .load(load),
+        .writeEn(writeEn)
+    );
+
+endmodule
+
+module test(fastclock, resetn, x, y, writeEn, colour);
+    input fastclock, resetn;
+    wire counter_reset, count_complete, incr_x, incr_y, load;
+    output [7:0] x;
+    output [6:0] y;
+    output writeEn;
+    output [2:0] colour;
+
+    trafficData td(
+        .fastclock(fastclock),
+        .resetn(resetn),
+        .x(x),
+        .y(y),
+        .colour(colour),
+        .colourIn(3'b110),
+        .incr_x(incr_x),
+        .incr_y(incr_y),
+        .load(load),
+        .count_complete(count_complete),
+        .counter_reset(counter_reset)
+    );
+
+    trafficControl tc(
+        .fastclock(fastclock),
+        .count_complete(count_complete),
+        .counter_reset(counter_reset),
+        .resetn(resetn),
+        .incr_x(incr_x),
+        .incr_y(incr_y),
+        .load(load),
+        .writeEn(writeEn)
     );
 
 endmodule
@@ -114,7 +139,7 @@ count_complete, erase, colour, colourIn, load);
     output [2:0] colour;
     output [7:0] x;
     output [6:0] y;
-    // xpos and ypos are index of the grid the frog is in
+    //  and ypos are index of the grid the frog is in
     reg [3:0] xpos;
     reg [2:0] ypos;
     reg [7:0] xcoor;
@@ -239,9 +264,17 @@ up, down, resetn, counter_reset, count_complete, erase, writeEn, load);
 
 endmodule
 
-module trafficData(fastclock, resetn, q1, q2, q3, q4,q5);
-    input fastclock, resetn;
-    output [15:0] q1, q2, q3, q4, q5;
+module trafficData(fastclock, resetn, x, y, colour, colourIn, incr_x, incr_y, load
+, count_complete, counter_reset);
+    input fastclock, resetn, load, counter_reset, incr_x, incr_y;
+    input [2:0] colourIn;
+    reg [3:0] xpos;
+    reg [2:0] ypos;
+    output [7:0] x;
+    output [6:0] y;
+    output reg [2:0] colour;
+    output count_complete;
+    wire [15:0] q1, q2, q3, q4, q5;
 
     wire clock;
     halfSecond halfSecondCounter(
@@ -254,7 +287,7 @@ module trafficData(fastclock, resetn, q1, q2, q3, q4,q5);
         .fastclock(fastclock),
         .clock(clock),
         .q(q1),
-        .init_val(16'b0000_0011_0001_1100), // Pseudo-random
+        .init_val(16'b1100_0011_0001_1111), // Pseudo-random
         .resetn(resetn)
     );
 
@@ -289,8 +322,87 @@ module trafficData(fastclock, resetn, q1, q2, q3, q4,q5);
         .init_val(16'b0111_0010_0000_1100),
         .resetn(resetn)
     );
+    
+    reg [7:0] xcoor;
+    reg [6:0] ycoor;
+    reg [5:0] counter;
+    always @(posedge fastclock)
+    begin
+        if (!resetn) begin
+			xpos <= 0;
+			ypos <= 0;
+		end
+        if (load) begin
+            xcoor <= xpos * 10;
+            ycoor <= ypos * 15;
+            if (q1[xpos] == 1'b1)
+                colour <= colourIn;
+            else
+                colour <= 3'b111;
+        end
+        else begin
+            if (incr_x) xpos <= xpos + 1;
+            if (incr_y) ypos <= ypos + 1;
+            if (counter_reset == 1'b1)
+                counter <= 3'b0;
+            else begin
+                counter = counter + 1;
+            end
+        end
+    end
 
+    assign count_complete = (counter == 6'b1111_11) ? 1 : 0;
+    assign x = xcoor + counter[2:0];
+    assign y = ycoor + counter[5:3];
 endmodule
+
+module trafficControl(fastclock, count_complete, counter_reset, resetn
+,incr_x, incr_y, load, writeEn);
+    input fastclock, resetn, count_complete;
+    output reg counter_reset, load, incr_x, incr_y, writeEn;
+
+    localparam s_load          = 4'd0,
+               s_incr_x         = 4'd1,
+               s_clear_counter  = 4'd2,
+               s_draw           = 4'd3;
+
+    reg [3:0] current_state, next_state;
+
+    always @(*)
+    begin
+        case (current_state)
+            s_incr_x: next_state = s_load;
+            s_load: next_state = s_clear_counter;
+            s_clear_counter: next_state = s_draw;
+            s_draw: next_state = count_complete ? s_incr_x : s_draw;
+        endcase
+    end
+
+    always @(*)
+    begin
+        counter_reset = 0;
+        incr_x = 0;
+        incr_y = 0;
+        load = 0;
+        writeEn = 1;
+        case(current_state)
+            s_load: load = 1;
+            s_incr_x: incr_x = 1;
+            s_clear_counter: counter_reset = 1;
+            s_draw: writeEn = 1;
+			endcase
+    end
+
+    always @(posedge fastclock)
+    begin
+        if (!resetn) 
+            current_state <= s_incr_x;
+        else
+            current_state <= next_state;
+
+    end
+endmodule
+
 
 // Traffic should move every half second
 module halfSecond(fastclock, resetn, signal);
@@ -317,15 +429,12 @@ module shiftRegister(fastclock, clock, q, init_val, resetn);
     input [15:0] init_val;
     output reg [15:0] q;
 
-    always @(posedge fastclock)
-    begin
-        if (!resetn) 
-            q <= init_val;
-    end
-
-    always @(posedge clock)
+    always @(posedge clock, negedge resetn)
     begin 
-        q <= {q[14:0], q[15]};
+			if (!resetn) 
+            q <= init_val;
+			else
+            q <= {q[14:0], q[15]};
     end
 endmodule
 
