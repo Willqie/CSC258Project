@@ -68,6 +68,8 @@ module project
 	// for the VGA controller, in addition to any other functionality your design may require.
     wire counter_reset2, count_complete2, erase;
     wire up, down, right, left, load2, is_draw;
+    wire [3:0] fxpos;
+    wire [2:0] fypos;
     frogData fd(
         .fastclock(CLOCK_50),
         .resetn(resetn),
@@ -82,7 +84,9 @@ module project
         .erase(erase),
         .colour(colour1),
         .colourIn(3'b111),
-        .load(load)
+        .load(load),
+        .xpos(fxpos),
+        .ypos(fypos)
     );
 
     frogControl fc(
@@ -122,7 +126,9 @@ module project
         .load(load2),
         .count_complete(count_complete2),
         .counter_reset(counter_reset2),
-        .xpos(xpos)
+        .xpos(xpos),
+        .fxpos(fxpos),
+        .fypos(fypos)
     );
 
     trafficControl tc(
@@ -156,7 +162,7 @@ module project
 endmodule
 
 module frogData(fastclock, resetn, up, down, left, right, x, y, counter_reset,
-count_complete, erase, colour, colourIn, load);
+count_complete, erase, colour, colourIn, load, xpos, ypos);
     input resetn, up, down, left, right, fastclock, counter_reset;
     input erase, load;
     input [2:0] colourIn;
@@ -165,8 +171,8 @@ count_complete, erase, colour, colourIn, load);
     output [7:0] x;
     output [6:0] y;
     //  and ypos are index of the grid the frog is in
-    reg [3:0] xpos;
-    reg [2:0] ypos;
+    output reg [3:0] xpos;
+    output reg [2:0] ypos;
     reg [7:0] xcoor;
     reg [6:0] ycoor;
     always @(posedge fastclock)
@@ -295,9 +301,11 @@ up, down, resetn, counter_reset, count_complete, erase, writeEn, load, is_draw);
 endmodule
 
 module trafficData(fastclock, resetn, x, y, colour, colourIn, incr_x, incr_y, load
-, count_complete, counter_reset, xpos);
+, count_complete, counter_reset, xpos, fxpos, fypos);
     input fastclock, resetn, load, counter_reset, incr_x, incr_y;
     input [2:0] colourIn;
+    input [3:0] fxpos;
+    input [2:0] fypos;
     output reg [3:0] xpos;
     reg [1:0] ypos;
     output [7:0] x;
@@ -353,29 +361,33 @@ module trafficData(fastclock, resetn, x, y, colour, colourIn, incr_x, incr_y, lo
         if (load) begin
             xcoor <= xpos * 10;
             ycoor <= (ypos + 1) * 15;
-            if (ypos == 2'd0) begin
-                if (q0[4'd15 - xpos] == 1'b1)
-                    colour <= colourIn;
-                else
-                    colour <= 3'b000;
-            end
-            if (ypos == 2'd1) begin
-                if (q1[4'd15-xpos] == 1'b1)
-                    colour <= colourIn;
-                else
-                    colour <= 3'b000;
-            end
-            if (ypos == 2'd2) begin
-                if (q2[4'd15-xpos] == 1'b1)
-                    colour <= colourIn;
-                else
-                    colour <= 3'b000;
-            end
-            if (ypos == 2'd3) begin
-                if (q3[4'd15-xpos] == 1'b1)
-                    colour <= colourIn;
-                else
-                    colour <= 3'b000;
+            if (fxpos == xpos && (fypos - 1'd1) == ypos) begin
+                colour <= 3'b111;
+            end else begin
+                if (ypos == 2'd0) begin
+                    if (q0[4'd15 - xpos] == 1'b1)
+                        colour <= colourIn;
+                    else
+                        colour <= 3'b000;
+                end
+                if (ypos == 2'd1) begin
+                    if (q1[4'd15-xpos] == 1'b1)
+                        colour <= colourIn;
+                    else
+                        colour <= 3'b000;
+                end
+                if (ypos == 2'd2) begin
+                    if (q2[4'd15-xpos] == 1'b1)
+                        colour <= colourIn;
+                    else
+                        colour <= 3'b000;
+                end
+                if (ypos == 2'd3) begin
+                    if (q3[4'd15-xpos] == 1'b1)
+                        colour <= colourIn;
+                    else
+                        colour <= 3'b000;
+                end
             end
         end
         else begin
