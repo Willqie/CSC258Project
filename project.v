@@ -66,6 +66,43 @@ module project
 			
 	// Put your code here. Your code should produce signals x,y,colour and writeEn/plot
 	// for the VGA controller, in addition to any other functionality your design may require.
+    wire counter_reset2, count_complete2, erase;
+    wire up, down, right, left, load2, is_draw;
+    frogData fd(
+        .fastclock(CLOCK_50),
+        .resetn(resetn),
+        .up(up),
+        .down(down),
+        .left(left),
+        .right(right),
+        .x(x1),
+        .y(y1),
+        .counter_reset(counter_reset1),
+        .count_complete(count_complete1),
+        .erase(erase),
+        .colour(colour1),
+        .colourIn(3'b111),
+        .load(load)
+    );
+
+    frogControl fc(
+        .fastclock(CLOCK_50),
+        .upin(~KEY[3]),
+        .downin(~KEY[2]),
+        .leftin(~KEY[1]),
+        .rightin(~KEY[0]),
+        .up(up),
+        .down(down),
+        .left(left),
+        .right(right),
+        .resetn(resetn),
+        .counter_reset(counter_reset1),
+        .count_complete(count_complete1),
+        .erase(erase),
+        .writeEn(writeEn1),
+        .load(load),
+        .is_draw(is_draw)
+    );
     wire counter_reset1, count_complete1, incr_x, incr_y, load;
     wire [3:0] xpos;
     wire [7:0] x1, x2;
@@ -76,90 +113,45 @@ module project
     trafficData td(
         .fastclock(CLOCK_50),
         .resetn(resetn),
-        .x(x1),
-        .y(y1),
-        .colour(colour1),
+        .x(x2),
+        .y(y2),
+        .colour(colour2),
         .colourIn(3'b110),
         .incr_x(incr_x),
         .incr_y(incr_y),
-        .load(load),
-        .count_complete(count_complete1),
-        .counter_reset(counter_reset1),
+        .load(load2),
+        .count_complete(count_complete2),
+        .counter_reset(counter_reset2),
         .xpos(xpos)
     );
 
     trafficControl tc(
         .fastclock(CLOCK_50),
-        .count_complete(count_complete1),
-        .counter_reset(counter_reset1),
+        .count_complete(count_complete2),
+        .counter_reset(counter_reset2),
         .resetn(resetn),
         .incr_x(incr_x),
         .incr_y(incr_y),
-        .load(load),
-        .writeEn(writeEn1),
+        .load(load2),
+        .writeEn(writeEn2),
         .xpos(xpos)
     );
     
-    wire counter_reset2, count_complete2, erase, load2, upwire, downwire, leftwire, rightwire;
-
-    frogData fg(
-        .fastclock(fastclock),
-        .resetn(resetn),
-        .up(upwire),
-        .down(downwire),
-        .left(leftwire),
-        .right(rightwire),
+    signalSwitch(
+        .switch(is_draw),
+        .x1(x1),
+        .y1(y1),
+        .colour1(colour1),
+        .writeEn1(writeEn1),
+        .x2(x2),
+        .y2(y2),
+        .colour2(colour2),
+        .writeEn2(writeEn2),
         .x(x),
         .y(y),
-        .counter_reset(counter_reset2),
-        .count_complete(counter_complete2),
-        .erase(erase),
         .colour(colour),
-        .colourIn(3'b111),
-        .load(load2)
+        .writeEn(writeEn)
     );
-
-    frogControl fg2(
-        .fastclock(fastclock),
-        .upin(~KEY[3]),
-        .downin(~KEY[2]),
-        .leftin(~KEY[1]),
-        .rightin(~KEY[0]),
-        .left(leftwire),
-        .right(rightwire),
-        .up(upwire),
-        .down(downwire),
-        .resetn(resetn),
-        .counter_reset(counter_reset2),
-        .count_complete(count_complete2),
-        .erase(erase),
-        .writeEn(writeEn2),
-        .load(load2)
-    );
-
-    wire switch;
-
-    // signalSwitch sswitch(
-    //     .switch(switch),
-    //     .x1(x1),
-    //     .y1(y1),
-    //     .colour1(colour1),
-    //     .writeEn1(writeEn1),
-    //     .x2(x2),
-    //     .y2(y2),
-    //     .colour2(colour2),
-    //     .writeEn2(writeEn2),
-    //     .x(x),
-    //     .y(y),
-    //     .colour(colour),
-    //     .writeEn(writeEn)
-    // );
-
-    // switchCounter scounter(
-    //     .fastclock(fastclock),
-    //     .switch(switch),
-    //     .resetn(resetn)
-    // );
 
 endmodule
 
@@ -220,11 +212,12 @@ count_complete, erase, colour, colourIn, load);
 endmodule
 
 module frogControl(fastclock, upin, downin, leftin, rightin, left, right,
-up, down, resetn, counter_reset, count_complete, erase, writeEn, load);
+up, down, resetn, counter_reset, count_complete, erase, writeEn, load, is_draw);
 
     input fastclock, upin, downin, leftin, rightin, resetn, count_complete;
     output reg left, right, up, down, counter_reset, erase, writeEn, load;
     wire change;
+    output reg is_draw;
 
     assign change = upin || downin || leftin || rightin;
 
@@ -267,13 +260,14 @@ up, down, resetn, counter_reset, count_complete, erase, writeEn, load);
         erase = 0;
         writeEn = 0;
         load = 0;
-
+        is_draw = 0;
         case(current_state)
             s_clear_counter1: counter_reset = 1;
             s_load: load = 1;
             s_erase: begin
 					erase = 1;
 					writeEn = 1;
+                    is_draw = 1;
 				end
             s_update: begin
                 if (upin == 1'b1) up = 1;
@@ -282,7 +276,10 @@ up, down, resetn, counter_reset, count_complete, erase, writeEn, load);
                 if (rightin == 1'b1) right = 1;
             end
             s_clear_counter2: counter_reset = 1;
-            s_draw: writeEn = 1;
+            s_draw: begin
+                writeEn = 1;
+                is_draw = 1;
+            end
 				s_load2: load = 1;
         endcase
     end
@@ -500,54 +497,44 @@ module shiftRegister(clock, q, init_val, resetn);
     end
 endmodule
 
-module switchCounter(fastclock, switch, resetn);
-    input fastclock, resetn;
-    output reg switch;
+// module switchCounter(fastclock, switch, resetn);
+//     input fastclock, resetn;
+//     output reg switch;
 
-    reg [6:0] counter;
+//     reg [10:0] counter;
 
-    always @(posedge fastclock)
-    begin
-        if (!resetn) begin
-            switch <= 1'b1;
-            counter <= 7'b0;
-        end 
-        else begin
-            if (counter == 7'b1111_11) begin
-                switch <= 1'b1;
-                counter <= 7'b0000_000;
-            end
-            else begin
-                switch <= 1'b0;
-                counter <= counter + 1'b1;
-            end
-        end
-    end
-endmodule
+//     always @(posedge fastclock)
+//     begin
+//         if (!resetn) begin
+//             switch <= 1'b1;
+//             counter <= 11'd0;
+//         end 
+//         else begin
+//             if (counter < 10'd1000) begin
+//                 switch <= 1'b1;
+//             end
+//             else begin
+//                 if (counter > 10'd1000 && counter)
+//                 switch <= 1'b0;
+//                 counter <= counter + 1'b1;
+//             end
+//         end
+//     end
+// endmodule
 
 module signalSwitch(switch, x1, y1, colour1, writeEn1, x2, y2, colour2, writeEn2, x, y, colour, writeEn);
     input [7:0] x1, x2;
     input [6:0] y1, y2;
     input [2:0] colour1, colour2;
     input writeEn1, writeEn2;
-    output reg [7:0] x;
-    output reg [6:0] y;
-    output reg [2:0] colour;
-    output reg writeEn;
+    output [7:0] x;
+    output [6:0] y;
+    output [2:0] colour;
+    output writeEn;
     input switch;
 
-    always @(posedge switch)
-    begin
-        if (switch == 1'b1) begin
-            x <= x1;
-            y <= y1;
-            colour <= colour1;
-            writeEn <= writeEn1;
-        end else begin
-            x <= x2;
-            y <= y2;
-            colour <= colour2;
-            writeEn <= writeEn2;
-        end
-    end
+    assign x = switch ? x1 : x2;
+    assign y = switch ? y1 : y2;
+    assign colour = switch ? colour1 : colour2;
+    assign writeEn = switch ? writeEn1: writeEn2;
 endmodule
