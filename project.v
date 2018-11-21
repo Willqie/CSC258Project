@@ -284,15 +284,13 @@ module trafficData(fastclock, resetn, x, y, colour, colourIn, incr_x, incr_y, lo
     );
 
     shiftRegister line1(
-        .fastclock(fastclock),
         .clock(clock),
         .q(q1),
-        .init_val(16'b1100_0011_0001_1111), // Pseudo-random
+        .init_val(16'b0000_0001_0000_0000), // Pseudo-random
         .resetn(resetn)
     );
 
     shiftRegister line2(
-        .fastclock(fastclock),
         .clock(clock),
         .q(q2),
         .init_val(16'b1100_0011_0001_0010),
@@ -300,7 +298,6 @@ module trafficData(fastclock, resetn, x, y, colour, colourIn, incr_x, incr_y, lo
     );
 
     shiftRegister line3(
-        .fastclock(fastclock),
         .clock(clock),
         .q(q3),
         .init_val(16'b0011_0011_0001_1011),
@@ -308,7 +305,6 @@ module trafficData(fastclock, resetn, x, y, colour, colourIn, incr_x, incr_y, lo
     );
 
     shiftRegister line4(
-        .fastclock(fastclock),
         .clock(clock),
         .q(q4),
         .init_val(16'b0110_0011_1001_1000),
@@ -316,7 +312,6 @@ module trafficData(fastclock, resetn, x, y, colour, colourIn, incr_x, incr_y, lo
     );
 
     shiftRegister line5(
-        .fastclock(fastclock),
         .clock(clock),
         .q(q5),
         .init_val(16'b0111_0010_0000_1100),
@@ -335,7 +330,7 @@ module trafficData(fastclock, resetn, x, y, colour, colourIn, incr_x, incr_y, lo
         if (load) begin
             xcoor <= xpos * 10;
             ycoor <= ypos * 15;
-            if (q1[xpos] == 1'b1)
+            if (q1[4'd15 - xpos] == 1'b1)
                 colour <= colourIn;
             else
                 colour <= 3'b111;
@@ -344,7 +339,7 @@ module trafficData(fastclock, resetn, x, y, colour, colourIn, incr_x, incr_y, lo
             if (incr_x) xpos <= xpos + 1;
             if (incr_y) ypos <= ypos + 1;
             if (counter_reset == 1'b1)
-                counter <= 3'b0;
+                counter <= 6'b0;
             else begin
                 counter = counter + 1;
             end
@@ -384,7 +379,7 @@ module trafficControl(fastclock, count_complete, counter_reset, resetn
         incr_x = 0;
         incr_y = 0;
         load = 0;
-        writeEn = 1;
+        writeEn = 0;
         case(current_state)
             s_load: load = 1;
             s_incr_x: incr_x = 1;
@@ -428,8 +423,8 @@ module halfSecond(fastclock, resetn, signal);
 endmodule
 
 // 16-bit width shifter
-module shiftRegister(fastclock, clock, q, init_val, resetn);
-    input resetn, fastclock, clock; // clock should be half second clock!
+module shiftRegister(clock, q, init_val, resetn);
+    input resetn, clock; // clock should be half second clock!
     input [15:0] init_val;
     output reg [15:0] q;
 
