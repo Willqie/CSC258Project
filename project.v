@@ -76,7 +76,7 @@ module project
         .colour(colour),
         .colourIn(3'b110),
         .incr_x(incr_x),
-        .incr_y(incr_y),
+        .incr_y(~KEY[3]),
         .load(load),
         .count_complete(count_complete),
         .counter_reset(counter_reset)
@@ -84,41 +84,6 @@ module project
 
     trafficControl tc(
         .fastclock(CLOCK_50),
-        .count_complete(count_complete),
-        .counter_reset(counter_reset),
-        .resetn(resetn),
-        .incr_x(incr_x),
-        .incr_y(incr_y),
-        .load(load),
-        .writeEn(writeEn)
-    );
-
-endmodule
-
-module test(fastclock, resetn, x, y, writeEn, colour);
-    input fastclock, resetn;
-    wire counter_reset, count_complete, incr_x, incr_y, load;
-    output [7:0] x;
-    output [6:0] y;
-    output writeEn;
-    output [2:0] colour;
-
-    trafficData td(
-        .fastclock(fastclock),
-        .resetn(resetn),
-        .x(x),
-        .y(y),
-        .colour(colour),
-        .colourIn(3'b110),
-        .incr_x(incr_x),
-        .incr_y(incr_y),
-        .load(load),
-        .count_complete(count_complete),
-        .counter_reset(counter_reset)
-    );
-
-    trafficControl tc(
-        .fastclock(fastclock),
         .count_complete(count_complete),
         .counter_reset(counter_reset),
         .resetn(resetn),
@@ -269,12 +234,12 @@ module trafficData(fastclock, resetn, x, y, colour, colourIn, incr_x, incr_y, lo
     input fastclock, resetn, load, counter_reset, incr_x, incr_y;
     input [2:0] colourIn;
     reg [3:0] xpos;
-    reg [2:0] ypos;
+    reg [1:0] ypos;
     output [7:0] x;
     output [6:0] y;
     output reg [2:0] colour;
     output count_complete;
-    wire [15:0] q1, q2, q3, q4, q5;
+    wire [15:0] q0, q1, q2, q3;
 
     wire clock;
     halfSecond halfSecondCounter(
@@ -283,41 +248,34 @@ module trafficData(fastclock, resetn, x, y, colour, colourIn, incr_x, incr_y, lo
         .signal(clock)
     );
 
+    shiftRegister line0(
+        .clock(clock),
+        .q(q0),
+        .init_val(16'b0000_1111_0000_0000), // Pseudo-random
+        .resetn(resetn)
+    );
+
     shiftRegister line1(
         .clock(clock),
         .q(q1),
-        .init_val(16'b0000_0001_0000_0000), // Pseudo-random
+        .init_val(16'b1100_0011_0001_0010),
         .resetn(resetn)
     );
 
     shiftRegister line2(
         .clock(clock),
         .q(q2),
-        .init_val(16'b1100_0011_0001_0010),
+        .init_val(16'b0011_0011_0001_1011),
         .resetn(resetn)
     );
 
     shiftRegister line3(
         .clock(clock),
         .q(q3),
-        .init_val(16'b0011_0011_0001_1011),
-        .resetn(resetn)
-    );
-
-    shiftRegister line4(
-        .clock(clock),
-        .q(q4),
         .init_val(16'b0110_0011_1001_1000),
         .resetn(resetn)
     );
 
-    shiftRegister line5(
-        .clock(clock),
-        .q(q5),
-        .init_val(16'b0111_0010_0000_1100),
-        .resetn(resetn)
-    );
-    
     reg [7:0] xcoor;
     reg [6:0] ycoor;
     reg [5:0] counter;
@@ -330,10 +288,30 @@ module trafficData(fastclock, resetn, x, y, colour, colourIn, incr_x, incr_y, lo
         if (load) begin
             xcoor <= xpos * 10;
             ycoor <= ypos * 15;
-            if (q1[4'd15 - xpos] == 1'b1)
-                colour <= colourIn;
-            else
-                colour <= 3'b111;
+            if (ypos == 2'd0) begin
+                if (q0[4'd15 - xpos] == 1'b1)
+                    colour <= colourIn;
+                else
+                    colour <= 3'b111;
+            end
+            if (ypos == 2'd1) begin
+                if (q1[4'd15-xpos] == 1'b1)
+                    colour <= colourIn;
+                else
+                    colour <= 3'b111;
+            end
+            if (ypos == 2'd2) begin
+                if (q1[4'd15-xpos] == 1'b1)
+                    colour <= colourIn;
+                else
+                    colour <= 3'b111;
+            end
+            if (ypos == 2'd3) begin
+                if (q1[4'd15-xpos] == 1'b1)
+                    colour <= colourIn;
+                else
+                    colour <= 3'b111;
+            end
         end
         else begin
             if (incr_x) xpos <= xpos + 1;
@@ -402,7 +380,7 @@ endmodule
 // Traffic should move every half second
 module halfSecond(fastclock, resetn, signal);
     input fastclock, resetn;
-    output signal;
+    output reg signal;
 
     reg [25:0] counter;
 
@@ -411,14 +389,18 @@ module halfSecond(fastclock, resetn, signal);
         if (!resetn)
             counter <= 26'd25_000_000;
         else begin
-            if (counter == 0) 
+            if (counter == 0) begin
                 counter <= 26'd25_000_000;
-            else 
+                signal <= 1'b1;
+            end
+            else begin
                 counter <= counter - 1;
+                signal <= 1'b0;
+            end
         end
     end
 
-    assign signal = (counter == 0) ? 1 : 0;
+    
 
 endmodule
 
@@ -430,9 +412,9 @@ module shiftRegister(clock, q, init_val, resetn);
 
     always @(posedge clock, negedge resetn)
     begin 
-			if (!resetn) 
+		if (!resetn) 
             q <= init_val;
-			else
+		else
             q <= {q[14:0], q[15]};
     end
 endmodule
