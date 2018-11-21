@@ -415,15 +415,19 @@ module halfSecond(fastclock, resetn, signal);
     begin
         if (!resetn)
             counter <= 26'd25_000_000;
-        else
-            counter <= counter - 1;
+        else begin
+            if (counter == 0) 
+                counter <= 26'd25_000_000;
+            else 
+                counter <= counter - 1;
+        end
     end
 
     assign signal = (counter == 0) ? 1 : 0;
 
 endmodule
 
-// 15-bit width shifter
+// 16-bit width shifter
 module shiftRegister(fastclock, clock, q, init_val, resetn);
     input resetn, fastclock, clock; // clock should be half second clock!
     input [15:0] init_val;
