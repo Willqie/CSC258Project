@@ -66,35 +66,100 @@ module project
 			
 	// Put your code here. Your code should produce signals x,y,colour and writeEn/plot
 	// for the VGA controller, in addition to any other functionality your design may require.
-    wire counter_reset, count_complete, incr_x, incr_y, load;
+    wire counter_reset1, count_complete1, incr_x, incr_y, load;
     wire [3:0] xpos;
-    
+    wire [7:0] x1, x2;
+    wire [6:0] y1, y2;
+    wire [2:0] colour1, colour2;
+    wire writeEn1, writeEn2;
+
     trafficData td(
         .fastclock(CLOCK_50),
         .resetn(resetn),
-        .x(x),
-        .y(y),
-        .colour(colour),
+        .x(x1),
+        .y(y1),
+        .colour(colour1),
         .colourIn(3'b110),
         .incr_x(incr_x),
         .incr_y(incr_y),
         .load(load),
-        .count_complete(count_complete),
-        .counter_reset(counter_reset),
+        .count_complete(count_complete1),
+        .counter_reset(counter_reset1),
         .xpos(xpos)
     );
 
     trafficControl tc(
         .fastclock(CLOCK_50),
-        .count_complete(count_complete),
-        .counter_reset(counter_reset),
+        .count_complete(count_complete1),
+        .counter_reset(counter_reset1),
         .resetn(resetn),
         .incr_x(incr_x),
         .incr_y(incr_y),
         .load(load),
-        .writeEn(writeEn),
+        .writeEn(writeEn1),
         .xpos(xpos)
     );
+    
+    wire counter_reset2, count_complete2, erase, load2, upwire, downwire, leftwire, rightwire;
+
+    frogData fg(
+        .fastclock(fastclock),
+        .resetn(resetn),
+        .up(upwire),
+        .down(downwire),
+        .left(leftwire),
+        .right(rightwire),
+        .x(x),
+        .y(y),
+        .counter_reset(counter_reset2),
+        .count_complete(counter_complete2),
+        .erase(erase),
+        .colour(colour),
+        .colourIn(3'b111),
+        .load(load2)
+    );
+
+    frogControl fg2(
+        .fastclock(fastclock),
+        .upin(~KEY[3]),
+        .downin(~KEY[2]),
+        .leftin(~KEY[1]),
+        .rightin(~KEY[0]),
+        .left(leftwire),
+        .right(rightwire),
+        .up(upwire),
+        .down(downwire),
+        .resetn(resetn),
+        .counter_reset(counter_reset2),
+        .count_complete(count_complete2),
+        .erase(erase),
+        .writeEn(writeEn2),
+        .load(load2)
+    );
+
+    wire switch;
+
+    // signalSwitch sswitch(
+    //     .switch(switch),
+    //     .x1(x1),
+    //     .y1(y1),
+    //     .colour1(colour1),
+    //     .writeEn1(writeEn1),
+    //     .x2(x2),
+    //     .y2(y2),
+    //     .colour2(colour2),
+    //     .writeEn2(writeEn2),
+    //     .x(x),
+    //     .y(y),
+    //     .colour(colour),
+    //     .writeEn(writeEn)
+    // );
+
+    // switchCounter scounter(
+    //     .fastclock(fastclock),
+    //     .switch(switch),
+    //     .resetn(resetn)
+    // );
 
 endmodule
 
@@ -432,5 +497,57 @@ module shiftRegister(clock, q, init_val, resetn);
             q <= init_val;
 		else
             q <= {q[14:0], q[15]};
+    end
+endmodule
+
+module switchCounter(fastclock, switch, resetn);
+    input fastclock, resetn;
+    output reg switch;
+
+    reg [6:0] counter;
+
+    always @(posedge fastclock)
+    begin
+        if (!resetn) begin
+            switch <= 1'b1;
+            counter <= 7'b0;
+        end 
+        else begin
+            if (counter == 7'b1111_11) begin
+                switch <= 1'b1;
+                counter <= 7'b0000_000;
+            end
+            else begin
+                switch <= 1'b0;
+                counter <= counter + 1'b1;
+            end
+        end
+    end
+endmodule
+
+module signalSwitch(switch, x1, y1, colour1, writeEn1, x2, y2, colour2, writeEn2, x, y, colour, writeEn);
+    input [7:0] x1, x2;
+    input [6:0] y1, y2;
+    input [2:0] colour1, colour2;
+    input writeEn1, writeEn2;
+    output reg [7:0] x;
+    output reg [6:0] y;
+    output reg [2:0] colour;
+    output reg writeEn;
+    input switch;
+
+    always @(posedge switch)
+    begin
+        if (switch == 1'b1) begin
+            x <= x1;
+            y <= y1;
+            colour <= colour1;
+            writeEn <= writeEn1;
+        end else begin
+            x <= x2;
+            y <= y2;
+            colour <= colour2;
+            writeEn <= writeEn2;
+        end
     end
 endmodule
