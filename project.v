@@ -66,7 +66,7 @@ module project
 			
 	// Put your code here. Your code should produce signals x,y,colour and writeEn/plot
 	// for the VGA controller, in addition to any other functionality your design may require.
-    wire counter_reset2, count_complete2, erase;
+    wire counter_reset2, count_complete2, erase, collide, fake_change;
     wire up, down, right, left, load2, is_draw;
     wire [3:0] fxpos;
     wire [2:0] fypos;
@@ -86,7 +86,8 @@ module project
         .colourIn(3'b111),
         .load(load),
         .xpos(fxpos),
-        .ypos(fypos)
+        .ypos(fypos),
+		  .collide(collide)
     );
 
     frogControl fc(
@@ -105,7 +106,8 @@ module project
         .erase(erase),
         .writeEn(writeEn1),
         .load(load),
-        .is_draw(is_draw)
+        .is_draw(is_draw),
+		  .fake_change(fake_change)
     );
     wire counter_reset1, count_complete1, incr_x, incr_y, load;
     wire [3:0] xpos;
@@ -128,7 +130,9 @@ module project
         .counter_reset(counter_reset2),
         .xpos(xpos),
         .fxpos(fxpos),
-        .fypos(fypos)
+        .fypos(fypos),
+		  .collide(collide),
+		  .fake_change(fake_change)
     );
 
     trafficControl tc(
@@ -162,9 +166,9 @@ module project
 endmodule
 
 module frogData(fastclock, resetn, up, down, left, right, x, y, counter_reset,
-count_complete, erase, colour, colourIn, load, xpos, ypos);
+count_complete, erase, colour, colourIn, load, xpos, ypos, collide);
     input resetn, up, down, left, right, fastclock, counter_reset;
-    input erase, load;
+    input erase, load, collide;
     input [2:0] colourIn;
     output count_complete;
     output [2:0] colour;
@@ -177,24 +181,29 @@ count_complete, erase, colour, colourIn, load, xpos, ypos);
     reg [6:0] ycoor;
     always @(posedge fastclock)
     begin
-        if (resetn == 1'b0) begin
+        if (collide == 1'b1) begin
             ypos <= 3'd6;
             xpos <= 4'd8;
-        end
-		  else begin
-            if (load == 1'b1) begin
-                xcoor <= 10 * xpos;
-                ycoor <= 15 * ypos; 
+        end else begin
+            if (resetn == 1'b0) begin
+                ypos <= 3'd6;
+                xpos <= 4'd8;
             end
-			if (up == 1'b1) 
-				ypos <= ypos - 1'b1;
-			if (down == 1'b1)
-                ypos <= ypos + 1'b1;
-			if (left == 1'b1)
-                xpos <= xpos - 1'b1;
-			if (right == 1'b1)
-                xpos <= xpos + 1'b1;
-		  end
+            else begin
+                if (load == 1'b1) begin
+                    xcoor <= 10 * xpos;
+                    ycoor <= 15 * ypos; 
+                end
+                if (up == 1'b1) 
+                    ypos <= ypos - 1'b1;
+                if (down == 1'b1)
+                    ypos <= ypos + 1'b1;
+                if (left == 1'b1)
+                    xpos <= xpos - 1'b1;
+                if (right == 1'b1)
+                    xpos <= xpos + 1'b1;
+            end
+        end
     end 
      
     reg [5:0] counter;
@@ -218,9 +227,9 @@ count_complete, erase, colour, colourIn, load, xpos, ypos);
 endmodule
 
 module frogControl(fastclock, upin, downin, leftin, rightin, left, right,
-up, down, resetn, counter_reset, count_complete, erase, writeEn, load, is_draw);
+up, down, resetn, counter_reset, count_complete, erase, writeEn, load, is_draw, fake_change);
 
-    input fastclock, upin, downin, leftin, rightin, resetn, count_complete;
+    input fastclock, upin, downin, leftin, rightin, resetn, count_complete, fake_change;
     output reg left, right, up, down, counter_reset, erase, writeEn, load;
     wire change;
     output reg is_draw;
@@ -244,7 +253,7 @@ up, down, resetn, counter_reset, count_complete, erase, writeEn, load, is_draw);
     always @(*)
     begin
         case (current_state)
-            s_wait: next_state = change ? s_load : s_wait;
+            s_wait: next_state = (change || fake_change) ? s_load : s_wait;
             s_load: next_state = s_clear_counter1;
             s_clear_counter1: next_state = s_erase;
             s_erase: next_state = count_complete ? s_update : s_erase;
@@ -252,7 +261,7 @@ up, down, resetn, counter_reset, count_complete, erase, writeEn, load, is_draw);
             s_load2: next_state = s_clear_counter2;
             s_clear_counter2: next_state = s_draw;
             s_draw: next_state = count_complete ? s_inter : s_draw;
-            s_inter: next_state = change ? s_inter : s_wait;
+            s_inter: next_state = (change || fake_change) ? s_inter : s_wait;
         endcase
     end
 
@@ -301,15 +310,17 @@ up, down, resetn, counter_reset, count_complete, erase, writeEn, load, is_draw);
 endmodule
 
 module trafficData(fastclock, resetn, x, y, colour, colourIn, incr_x, incr_y, load
-, count_complete, counter_reset, xpos, fxpos, fypos);
+, count_complete, counter_reset, xpos, fxpos, fypos, collide, fake_change);
     input fastclock, resetn, load, counter_reset, incr_x, incr_y;
     input [2:0] colourIn;
     input [3:0] fxpos;
     input [2:0] fypos;
     output reg [3:0] xpos;
+	 output reg fake_change;
     reg [1:0] ypos;
     output [7:0] x;
     output [6:0] y;
+    output reg collide;
     output reg [2:0] colour;
     output count_complete;
     wire [15:0] q0, q1, q2, q3;
@@ -354,14 +365,44 @@ module trafficData(fastclock, resetn, x, y, colour, colourIn, incr_x, incr_y, lo
     reg [5:0] counter;
     always @(posedge fastclock)
     begin
+		  if (collide == 1'b1) begin
+		      collide <= 1'b0;
+				fake_change <= 1'b0;
+		  end
         if (!resetn) begin
 			xpos <= 0;
 			ypos <= 0;
+			collide <= 0;
+			fake_change <= 1'b0;
 		end
         if (load) begin
             xcoor <= xpos * 10;
             ycoor <= (ypos + 1) * 15;
             if (fxpos == xpos && (fypos - 1'd1) == ypos) begin
+                if((fypos - 1'b1) == 1'b0) begin
+                    if(q0[15 - fxpos] == 1'b1) begin
+                        collide <= 1'b1;
+								fake_change <= 1'b1;
+                    end
+                end
+                if((fypos - 1'b1) == 1'b1) begin
+                    if((q1[15 - fxpos]) == 1'b1) begin
+                        collide <= 1'b1;
+								fake_change <= 1'b1;
+                    end
+                end
+                if((fypos - 1'b1) == 2) begin
+                    if(q2[15 - fxpos] == 1'b1) begin
+                        collide <= 1'b1;
+								fake_change <= 1'b1;
+                    end
+                end
+                if((fypos - 1'b1) == 3) begin
+                    if(q3[15 - fxpos] == 1'b1) begin
+                        collide <= 1'b1;
+								fake_change <= 1'b1;
+                    end
+                end
                 colour <= 3'b111;
             end else begin
                 if (ypos == 2'd0) begin
