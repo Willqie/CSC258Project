@@ -67,9 +67,13 @@ module project
 	// Put your code here. Your code should produce signals x,y,colour and writeEn/plot
 	// for the VGA controller, in addition to any other functionality your design may require.
     wire counter_reset2, count_complete2, erase, collide, fake_change;
+	 wire fake_change_bus, fake_change_counter;
     wire up, down, right, left, load2, is_draw;
     wire [3:0] fxpos;
     wire [2:0] fypos;
+	 
+	 assign fake_change_bus = fake_change || fake_change_counter;
+	 
     frogData fd(
         .fastclock(CLOCK_50),
         .resetn(resetn),
@@ -107,7 +111,7 @@ module project
         .writeEn(writeEn1),
         .load(load),
         .is_draw(is_draw),
-		  .fake_change(fake_change)
+		  .fake_change(fake_change_bus)
     );
     wire counter_reset1, count_complete1, incr_x, incr_y, load;
     wire [3:0] xpos;
@@ -162,6 +166,12 @@ module project
         .colour(colour),
         .writeEn(writeEn)
     );
+	 
+	 fakechangeCounter fcCounter(
+		.fastclock(CLOCK_50),
+		.resetn(resetn),
+		.fakechange(fake_change_counter)
+	 );
 
 endmodule
 
@@ -591,3 +601,38 @@ module signalSwitch(switch, x1, y1, colour1, writeEn1, x2, y2, colour2, writeEn2
     assign colour = switch ? colour1 : colour2;
     assign writeEn = switch ? writeEn1: writeEn2;
 endmodule
+
+module fakechangeCounter(fastclock, resetn, fakechange);
+	input fastclock, resetn;
+	output reg fakechange;
+	
+	reg [26:0] counter;
+	
+	always @(posedge fastclock)
+	begin
+		if (!resetn)begin
+			counter <= 27'd0;
+			fakechange <= 1'b0;
+		end
+		if (counter == 27'd1_0000) begin
+				counter <= 27'd0;
+				fakechange <= 1'b1;
+		end else begin
+			counter <= counter + 1;
+			fakechange <= 1'b0;
+		end
+	
+	end
+	
+endmodule
+
+
+
+
+
+
+
+
+
+
+
