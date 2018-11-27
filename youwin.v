@@ -1,4 +1,4 @@
-module project
+module youwin
 	(
 		CLOCK_50,						//	On Board 50 MHz
 		// Your inputs and outputs here
@@ -81,7 +81,7 @@ module project
     );
 
     control_win control(
-        .fastclock(.fastclock),
+        .fastclock(CLOCK_50),
         .xpos(xpos),
         .resetn(resetn),
         .incr_x(incr_x),
@@ -96,17 +96,17 @@ endmodule
 module youwin_data(fastclock, resetn, xout, yout, colourOut
 , count_complete, clear_counter, incr_x, incr_y, load, xpos);
     input fastclock, incr_x, incr_y, resetn, clear_counter, load;
-    output reg count_complete;
+    output count_complete;
     output [7:0] xout;
     output [6:0] yout;
     output reg [2:0] colourOut;
 
     reg [15:0] q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15;
 
-    output reg xpos[3:0];
-    reg ypos[3:0];
-    reg xcoor[7:0];
-    reg ycoor[6:0];
+    output reg [3:0] xpos;
+    reg [3:0] ypos;
+    reg [7:0] xcoor;
+    reg [6:0] ycoor;
     reg [1:0] counter;
 
     always @(posedge fastclock)
@@ -133,8 +133,8 @@ module youwin_data(fastclock, resetn, xout, yout, colourOut
             q15 <= 16'b0;
         end
         if (load) begin
-            xout <= xpos * 10;
-            yout <= ypos * 7;
+            xcoor <= xpos * 10;
+            ycoor <= ypos * 7;
             if(ypos == 4'd0) begin
                 if (q0[4'd15 - xpos] == 1'b1)
                     colourOut <= 3'b110;
@@ -250,8 +250,9 @@ endmodule
 module control_win(fastclock, xpos, resetn, incr_x, incr_y,
 clear_counter, load, writeEn, count_complete);
     input fastclock, xpos, resetn, count_complete;
-    output incr_x, incr_y, load, clear_counter, writeEn;
-
+    output reg incr_x, incr_y, load, writeEn;
+	 output reg clear_counter;
+	 
     localparam s_load          = 4'd0,
                s_incr_x         = 4'd1,
                s_clear_counter  = 4'd2,
