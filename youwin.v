@@ -75,7 +75,7 @@ module youwin
         .count_complete(count_complete),
         .clear_counter(clear_counter),
         .incr_x(incr_x),
-        .incr_y(incr_y),
+        .incr_y(KEY[0]),
         .load(load),
         .xpos(xpos)
     );
