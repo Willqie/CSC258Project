@@ -75,7 +75,7 @@ module youwin
         .count_complete(count_complete),
         .clear_counter(clear_counter),
         .incr_x(incr_x),
-        .incr_y(KEY[0]),
+        .incr_y(incr_y),
         .load(load),
         .xpos(xpos)
     );
@@ -249,9 +249,10 @@ endmodule
 
 module control_win(fastclock, xpos, resetn, incr_x, incr_y,
 clear_counter, load, writeEn, count_complete);
-    input fastclock, xpos, resetn, count_complete;
+    input fastclock, resetn, count_complete;
     output reg incr_x, incr_y, load, writeEn;
 	 output reg clear_counter;
+	 input [3:0] xpos;
 	 
     localparam s_load          = 4'd0,
                s_incr_x         = 4'd1,
