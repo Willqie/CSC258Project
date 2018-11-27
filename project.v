@@ -68,7 +68,7 @@ module project
 	// for the VGA controller, in addition to any other functionality your design may require.
     wire counter_reset2, count_complete2, erase, collide, fake_change;
 	 wire fake_change_bus, fake_change_counter;
-    wire up, down, right, left, load2, is_draw;
+    wire up, down, right, left, load2, is_draw, win;
     wire [3:0] fxpos;
     wire [2:0] fypos;
 	 
@@ -91,7 +91,8 @@ module project
         .load(load),
         .xpos(fxpos),
         .ypos(fypos),
-		  .collide(collide)
+		  .collide(collide),
+          .win(win)
     );
 
     frogControl fc(
@@ -150,7 +151,10 @@ module project
         .writeEn(writeEn2),
         .xpos(xpos)
     );
-    
+    wire [7:0] x_notwin, x_win;
+    wire [6:0] y_notwin, y_win;
+    wire [2:0] colour_notwin, colour_win;
+    wire writeEn_notwin, writeEn_win;
     signalSwitch(
         .switch(is_draw),
         .x1(x1),
@@ -161,10 +165,10 @@ module project
         .y2(y2),
         .colour2(colour2),
         .writeEn2(writeEn2),
-        .x(x),
-        .y(y),
-        .colour(colour),
-        .writeEn(writeEn)
+        .x(x_notwin),
+        .y(y_notwin),
+        .colour(colour_notwin),
+        .writeEn(writeEn_notwin)
     );
 	 
 	 fakechangeCounter fcCounter(
@@ -173,10 +177,34 @@ module project
 		.fakechange(fake_change_counter)
 	 );
 
+    overwriteController overwrite(
+        .x_win(x_win),
+        .y_win(y_win),
+        .colour_win(colour_win),
+        .writeEn1(writeEn_win),
+        .x1(x_notwin),
+        .y1(y_notwin),
+        .colour1(colour_notwin),
+        .writeEn2(writeEn_notwin),
+        .overwrite(win),
+        .x(x),
+        .y(y),
+        .colour(colour),
+        .writeEn(writeEn)
+    );
+
+    youwin youwinInstance(
+        .fastclock(CLOCK_50),
+        .resetn(resetn),
+        .x(x_win),
+        .y(y_win),
+        .colourOut(colour_win),
+        .writeEn(writeEn_win)
+    );
 endmodule
 
 module frogData(fastclock, resetn, up, down, left, right, x, y, counter_reset,
-count_complete, erase, colour, colourIn, load, xpos, ypos, collide);
+count_complete, erase, colour, colourIn, load, xpos, ypos, collide, win);
     input resetn, up, down, left, right, fastclock, counter_reset;
     input erase, load, collide;
     input [2:0] colourIn;
@@ -184,6 +212,7 @@ count_complete, erase, colour, colourIn, load, xpos, ypos, collide);
     output [2:0] colour;
     output [7:0] x;
     output [6:0] y;
+    output win;
     //  and ypos are index of the grid the frog is in
     output reg [3:0] xpos;
     output reg [2:0] ypos;
@@ -233,6 +262,7 @@ count_complete, erase, colour, colourIn, load, xpos, ypos, collide);
     assign colour = erase ? 3'd0 :  colourIn;
     assign x = xcoor + counter[2:0];
     assign y = ycoor + counter[5:3];
+    assign win = (ypos == 3'b0);
 
 endmodule
 
@@ -626,7 +656,275 @@ module fakechangeCounter(fastclock, resetn, fakechange);
 	
 endmodule
 
+module overwriteController(x_win, y_win, colour_win, writeEn1, x1, y1, colour1, writeEn2,
+overwrite, x, y, colour, writeEn);
+    input [7:0] x_win, x1;
+    input [6:0] y_win, y1;
+    input overwrite, writeEn1, writeEn2;
+    input [2:0] colour_win, colour1;
+    output [2:0] colour;
+    output writeEn;
+    output [7:0] x;
+    output [6:0] y;
 
+    assign colour = overwrite ? colour_win : colour1;
+    assign writeEn = overwrite ? writeEn1 : writeEn2;
+    assign x = overwrite ? x_win : x1;
+    assign y = overwrite ? y_win : y1;
+
+endmodule
+
+module youwin(fastclock, resetn, x, y, colourOut, writeEn);
+    input fastclock, resetn;
+    output [7:0] x;
+    output [6:0] y;
+    output [2:0] colourOut;
+    output writeEn;
+    wire count_complete, clear_counter, incr_x, incr_y, load;
+    wire [3:0] xpos; 
+
+    youwin_data data(
+        .fastclock(fastclock),
+        .resetn(resetn),
+        .xout(x),
+        .yout(y),
+        .colourOut(colourOut),
+        .count_complete(count_complete),
+        .clear_counter(clear_counter),
+        .incr_x(incr_x),
+        .incr_y(incr_y),
+        .load(load),
+        .xpos(xpos)
+    );
+
+    control_win control(
+        .fastclock(fastclock),
+        .xpos(xpos),
+        .resetn(resetn),
+        .incr_x(incr_x),
+        .incr_y(incr_y),
+        .clear_counter(clear_counter),
+        .load(load),
+        .writeEn(writeEn),
+        .count_complete(count_complete)
+    );
+endmodule
+
+module youwin_data(fastclock, resetn, xout, yout, colourOut
+, count_complete, clear_counter, incr_x, incr_y, load, xpos);
+    input fastclock, incr_x, incr_y, resetn, clear_counter, load;
+    output count_complete;
+    output [7:0] xout;
+    output [6:0] yout;
+    output reg [2:0] colourOut;
+
+    reg [15:0] q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15;
+
+    output reg [3:0] xpos;
+    reg [3:0] ypos;
+    reg [7:0] xcoor;
+    reg [6:0] ycoor;
+    reg [5:0] counter;
+
+    always @(posedge fastclock)
+    begin
+        if (!resetn) begin
+            xpos <= 4'b0;
+            ypos <= 4'b0;
+            counter <= 6'b0;
+            q0 <= 16'b1000_1000_1000_1001;
+            q1 <= 16'b1000_1001_0100_1001;
+            q2 <= 16'b0101_0001_0100_1001;
+            q3 <= 16'b0010_0001_0100_1001;
+            q4 <= 16'b0010_0001_0100_1001;
+            q5 <= 16'b0010_0000_1000_0110;
+            q6 <= 16'b0;
+            q7 <= 16'b1001_0010_0100_1001;
+            q8 <= 16'b1001_0010_0100_1001;
+            q9 <= 16'b1001_0010_0100_1101;
+            q10 <= 16'b1001_0010_0100_1011;
+            q11 <= 16'b1001_0010_0100_1001;
+            q12 <= 16'b0110_1100_0100_1001;
+            q13 <= 16'b0;
+            q14 <= 16'b0;
+            q15 <= 16'b0;
+        end
+        if (load) begin
+            xcoor <= xpos * 10;
+            ycoor <= ypos * 7;
+            if(ypos == 4'd0) begin
+                if (q0[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd1) begin
+                if (q1[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd2) begin
+                if (q2[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd3) begin
+                if (q3[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd4) begin
+                if (q4[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd5) begin
+                if (q5[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd6) begin
+                if (q6[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd7) begin
+                if (q7[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd8) begin
+                if (q8[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd9) begin
+                if (q9[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd10) begin
+                if (q10[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd11) begin
+                if (q11[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd12) begin
+                if (q12[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd13) begin
+                if (q13[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd14) begin
+                if (q14[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd15) begin
+                if (q15[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+        end
+        if (incr_x)
+            xpos <= xpos + 1;
+        if (incr_y)
+            ypos <= ypos + 1;
+        if (clear_counter) 
+            counter <= 6'b0;
+        else 
+            counter <= counter + 1'b1;
+    end
+
+    assign count_complete = (counter == 6'b1111_11) ? 1 : 0;
+    assign xout = xcoor + counter[2:0];
+    assign yout = ycoor + counter[5:3];
+endmodule
+
+module control_win(fastclock, xpos, resetn, incr_x, incr_y,
+clear_counter, load, writeEn, count_complete);
+    input fastclock, resetn, count_complete;
+    output reg incr_x, incr_y, load, writeEn;
+	 output reg clear_counter;
+	 input [3:0] xpos;
+	 
+    localparam s_load          = 4'd0,
+               s_incr_x         = 4'd1,
+               s_clear_counter  = 4'd2,
+               s_draw           = 4'd3,
+               s_incr_y         = 4'd4,
+               s_inter          = 4'd5;
+
+    reg [3:0] current_state, next_state;
+    
+    always @(*)
+    begin
+        case (current_state)
+            s_incr_x: next_state = s_load;
+            s_load: next_state = s_clear_counter;
+            s_clear_counter: next_state = s_draw;
+            s_draw: next_state = count_complete ? s_inter : s_draw;
+            s_inter: begin
+                if (xpos == 4'b1111) begin
+                    next_state = s_incr_y;
+                end
+                else begin
+                    next_state = s_incr_x;
+                end
+            end
+            s_incr_y: next_state = s_incr_x;
+        endcase
+    end
+
+    always @(*)
+    begin
+        clear_counter = 0;
+        incr_x = 0;
+        incr_y = 0;
+        load = 0;
+        writeEn = 0;
+        case(current_state)
+            s_load: load = 1;
+            s_incr_x: incr_x = 1;
+            s_clear_counter: clear_counter = 1;
+            s_draw: writeEn = 1;
+            s_incr_y: incr_y = 1;
+			endcase
+    end
+
+    always @(posedge fastclock)
+    begin
+        if (!resetn) 
+            current_state <= s_incr_x;
+        else
+            current_state <= next_state;
+
+    end
+
+endmodule
 
 
 
