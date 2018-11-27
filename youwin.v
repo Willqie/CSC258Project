@@ -107,14 +107,14 @@ module youwin_data(fastclock, resetn, xout, yout, colourOut
     reg [3:0] ypos;
     reg [7:0] xcoor;
     reg [6:0] ycoor;
-    reg [1:0] counter;
+    reg [5:0] counter;
 
     always @(posedge fastclock)
     begin
         if (!resetn) begin
             xpos <= 4'b0;
             ypos <= 4'b0;
-            counter <= 2'b0;
+            counter <= 6'b0;
             q0 <= 16'b1000_1000_1000_1001;
             q1 <= 16'b1000_1001_0100_1001;
             q2 <= 16'b0101_0001_0100_1001;
@@ -237,14 +237,14 @@ module youwin_data(fastclock, resetn, xout, yout, colourOut
         if (incr_y)
             ypos <= ypos + 1;
         if (clear_counter) 
-            counter <= 2'b0;
+            counter <= 6'b0;
         else 
             counter <= counter + 1'b1;
     end
 
-    assign count_complete = (counter == 2'b11) ? 1 : 0;
-    assign xout = xcoor + counter[0];
-    assign yout = ycoor + counter[1];
+    assign count_complete = (counter == 6'b1111_11) ? 1 : 0;
+    assign xout = xcoor + counter[2:0];
+    assign yout = ycoor + counter[5:3];
 endmodule
 
 module control_win(fastclock, xpos, resetn, incr_x, incr_y,
