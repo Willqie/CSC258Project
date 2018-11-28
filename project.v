@@ -151,10 +151,12 @@ module project
         .writeEn(writeEn2),
         .xpos(xpos)
     );
-    wire [7:0] x_notwin, x_win;
-    wire [6:0] y_notwin, y_win;
+    wire [7:0] x_notwin, x_win, x_clear;
+    wire [6:0] y_notwin, y_win, y_clear;
     wire [2:0] colour_notwin, colour_win;
-    wire writeEn_notwin, writeEn_win;
+    wire writeEn_notwin, writeEn_win, clear_counter_clear, count_complete_clear;
+    wire [1:0] sig_select;
+    
     signalSwitch(
         .switch(is_draw),
         .x1(x1),
@@ -177,20 +179,24 @@ module project
 		.fakechange(fake_change_counter)
 	 );
 
-    overwriteController overwrite(
-        .x_win(x_win),
-        .y_win(y_win),
-        .colour_win(colour_win),
-        .writeEn1(writeEn_win),
+    signal_selector sigselector(
         .x1(x_notwin),
         .y1(y_notwin),
         .colour1(colour_notwin),
-        .writeEn2(writeEn_notwin),
-        .overwrite(win),
+        .writeEn1(writeEn_notwin),
+        .x2(x_win),
+        .y2(y_win),
+        .colour2(colour_win),
+        .writeEn2(writeEn_win),
+        .x3(x_clear),
+        .y3(y_clear),
+        .colour3(3'b000),
+        .writeEn3(1'b1),
         .x(x),
         .y(y),
+        .writeEn(writeEn),
         .colour(colour),
-        .writeEn(writeEn)
+        .sig_select(sig_select)
     );
 
     youwin youwinInstance(
@@ -200,6 +206,22 @@ module project
         .y(y_win),
         .colourOut(colour_win),
         .writeEn(writeEn_win)
+    );
+
+    clear_screen clear_screen_instance(
+        .fastclock(CLOCK_50),
+        .x(x_clear),
+        .y(y_clear),
+        .count_complete(count_complete_clear),
+        .clear_counter(clear_counter_clear)
+    );
+
+    game_control topControl(
+        .fastclock(CLOCK_50),
+        .sig_select(sig_select),
+        .count_complete(count_complete_clear),
+        .clear_counter(clear_counter_clear),
+        .win(win)
     );
 endmodule
 
@@ -926,7 +948,107 @@ clear_counter, load, writeEn, count_complete);
 
 endmodule
 
+module clear_screen(fastclock, x, y, count_complete, clear_counter);
+    input fastclock, clear_counter;
+    output [7:0] x;
+    output [6:0] y;
+    output count_complete;
 
+    reg [14:0] counter;
+    always @(posedge fastclock)
+    begin
+        if (clear_counter == 1'b1) 
+            counter <= 15'b0;
+        else 
+            counter <= counter + 1;
+    end
+
+    assign x = counter[7:0];
+    assign y = counter[14:8];
+    assign count_complete = (counter == 15'b1111_1111_1111_111) ? 1 : 0;
+
+endmodule
+
+//sigselect: 00 for game, 01 for win, 10 for clear_screen
+module game_control(fastclock, sig_select, count_complete, clear_counter, win);
+    input fastclock, count_complete, win;
+    output reg clear_counter;
+    output reg [1:0] sig_select;
+
+    reg [3:0] current_state, next_state;
+
+    localparam s_play          = 4'd0,
+               s_win           = 4'd1,
+               s_clear_screen  = 4'd2,
+               s_clear_counter = 4'd3;
+    
+    always @(*)
+    begin
+        case(current_state)
+            s_play: next_state = win ? s_win : s_play;
+            s_win: next_state = win ? s_win: s_clear_counter;
+            s_clear_counter: next_state = s_clear_screen;
+            s_clear_screen: next_state = count_complete ? s_play : s_clear_screen;
+        endcase
+    end
+
+    always @(*)
+    begin enable_signals:
+        clear_counter = 0;
+        sig_select = 0;
+        case(current_state)
+            s_play: sig_select = 2'b00;
+            s_win: sig_select = 2'b01;
+            s_clear_counter: clear_counter = 1;
+            s_clear_screen: sig_select = 2'b10;
+        endcase
+    end
+
+    always @(posedge fastclock)
+    begin
+        current_state <= next_state;
+    end
+
+endmodule
+
+// 1 for game signal, 2 for win signal, 3 for clear_screen
+module signal_selector(x1, y1, colour1, writeEn1, x2, y2, colour2, writeEn2,
+x3, y3, colour3, writeEn3, x, y, colour, writeEn, sig_select);
+    input [7:0] x1, x2, x3;
+    input [6:0] y1, y2, y3;
+    input [2:0] colour1, colour2, colour3;
+    input writeEn1, writeEn2, writeEn3;
+    output reg [7:0] x;
+    output reg [6:0] y;
+    output reg [2:0] colour;
+    output reg writeEn;
+    input [1:0] sig_select;
+
+    always @(*)
+    begin
+        case(sig_select)
+            2'b00: begin
+                x = x1;
+                y = y1;
+                colour = colour1;
+                writeEn = writeEn1;
+            end
+            2'b01: begin
+                x = x2;
+                y = y2;
+                colour = colour2;
+                writeEn = writeEn2;
+            end
+            2'b10: begin
+                x = x3;
+                y = y3;
+                colour = colour3;
+                writeEn = writeEn3;
+            end
+		endcase
+    end
+    
+endmodule
 
 
 
