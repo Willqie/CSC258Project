@@ -40,7 +40,7 @@ module decimal_digit(clear, increment, x, carry);
                five  = 4'd5,
                six   = 4'd6,
                seven = 4'd7,
-               eigth = 4'd8,
+               eight = 4'd8,
                nine  = 4'd9;
     
     reg [3:0] current_state, next_state;
@@ -49,7 +49,7 @@ module decimal_digit(clear, increment, x, carry);
     begin
         case(current_state)
             zero:  next_state = one;
-            one:   next_stete = two;
+            one:   next_state = two;
             two:   next_state = three;
             three: next_state = four;
             four:  next_state = five;
@@ -72,23 +72,24 @@ module decimal_digit(clear, increment, x, carry);
     always @(*)
     begin
         case(current_state)
-            zero:  x = 4'b0000;
-            one:   x = 4'b0001;
-            two:   x = 4'b0002;
-            three: x = 4'b0003;
-            four:  x = 4'b0004;
-            five:  x = 4'b0005;
-            six:   x = 4'b0006;
-            seven: x = 4'b0007;
-            eight: x = 4'b0008;
-            nine:  x = 4'b0009;
+            zero:  x = 4'd0;
+            one:   x = 4'd1;
+            two:   x = 4'd2;
+            three: x = 4'd3;
+            four:  x = 4'd4;
+            five:  x = 4'd5;
+            six:   x = 4'd6;
+            seven: x = 4'd7;
+            eight: x = 4'd8;
+            nine:  x = 4'd9;
+			endcase
 
     end
 
     assign carry = (current_state == nine) ? 1 : 0;
 endmodule
 
-module Second(fastclock, resetn, signal);
+module second(fastclock, resetn, signal);
     input fastclock, resetn;
     output reg signal;
 
@@ -218,4 +219,3 @@ module Hex6(y, c3, c2, c1, c0);
     assign y = ~(c3 & ~c2 | c1 & ~c0 | c0 & c3 | ~c3 & c2 & ~c1 | c1 & ~c3 & ~c2);
 
 endmodule
-
