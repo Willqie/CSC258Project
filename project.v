@@ -120,6 +120,7 @@ module project
     wire [6:0] y1, y2;
     wire [2:0] colour1, colour2;
     wire writeEn1, writeEn2;
+    wire change_pos;
 
     trafficData td(
         .fastclock(CLOCK_50),
@@ -136,8 +137,9 @@ module project
         .xpos(xpos),
         .fxpos(fxpos),
         .fypos(fypos),
-		  .collide(collide),
-		  .fake_change(fake_change)
+		.collide(collide),
+		.fake_change(fake_change),
+        .clock(change_pos)
     );
 
     trafficControl tc(
@@ -222,6 +224,13 @@ module project
         .count_complete(count_complete_clear),
         .clear_counter(clear_counter_clear),
         .win(win)
+    );
+
+    change_sig_selector change_sig_instance(
+        .fastclock(CLOCK_50),
+        .select(SW[9:8]),
+        .change_sig(change_pos),
+        .resetn(resetn)
     );
 endmodule
 
@@ -372,7 +381,7 @@ up, down, resetn, counter_reset, count_complete, erase, writeEn, load, is_draw, 
 endmodule
 
 module trafficData(fastclock, resetn, x, y, colour, colourIn, incr_x, incr_y, load
-, count_complete, counter_reset, xpos, fxpos, fypos, collide, fake_change);
+, count_complete, counter_reset, xpos, fxpos, fypos, collide, fake_change, clock);
     input fastclock, resetn, load, counter_reset, incr_x, incr_y;
     input [2:0] colourIn;
     input [3:0] fxpos;
@@ -386,13 +395,14 @@ module trafficData(fastclock, resetn, x, y, colour, colourIn, incr_x, incr_y, lo
     output reg [2:0] colour;
     output count_complete;
     wire [15:0] q0, q1, q2, q3;
-
-    wire clock;
-    halfSecond halfSecondCounter(
-        .fastclock(fastclock),
-        .resetn(resetn),
-        .signal(clock)
-    );
+    input clock;
+    
+    // wire clock;
+    // halfSecond halfSecondCounter(
+    //     .fastclock(fastclock),
+    //     .resetn(resetn),
+    //     .signal(clock)
+    // );
 
     shiftRegister line0(
         .clock(clock),
@@ -1049,6 +1059,98 @@ x3, y3, colour3, writeEn3, x, y, colour, writeEn, sig_select);
     end
     
 endmodule
+
+// Traffic should move every half second
+module Second(fastclock, resetn, signal);
+    input fastclock, resetn;
+    output reg signal;
+
+    reg [25:0] counter;
+
+    always @(posedge fastclock)
+    begin
+        if (!resetn)
+            counter <= 26'd50_000_000;
+        else begin
+            if (counter == 0) begin
+                counter <= 26'd50_000_000;
+                signal <= 1'b1;
+            end
+            else begin
+                counter <= counter - 1;
+                signal <= 1'b0;
+            end
+        end
+    end
+
+endmodule
+
+module twoSecond(fastclock, resetn, signal);
+    input fastclock, resetn;
+    output reg signal;
+
+    reg [25:0] counter;
+
+    always @(posedge fastclock)
+    begin
+        if (!resetn)
+            counter <= 26'd100_000_000;
+        else begin
+            if (counter == 0) begin
+                counter <= 26'd100_000_000;
+                signal <= 1'b1;
+            end
+            else begin
+                counter <= counter - 1;
+                signal <= 1'b0;
+            end
+        end
+    end
+
+endmodule
+
+// 00 for not move, 01 for half second, 10 for one second, 11 for two second
+module change_sig_selector(fastclock, select, change_sig, resetn);
+    input fastclock, resetn;
+    input [1:0] select;
+    output reg change_sig;
+
+    wire chage0, change1, change2, change3;
+
+    assign change0 = 1'b0;
+    
+    halfSecond halfSecondInstance(
+        .fastclock(fastclock),
+        .resetn(resetn),
+        .signal(change1)
+    );
+
+    Second secondInstance(
+        .fastclock(fastclock),
+        .resetn(resetn),
+        .signal(change2)
+    );
+
+    twoSecond twoSecondInstance(
+        .fastclock(fastclock),
+        .resetn(resetn),
+        .signal(change3)
+    );
+
+    always @(*)
+    begin
+        case(select)
+            2'b00: change_sig = change0;
+            2'b01: change_sig = change1;
+            2'b10: change_sig = change2;
+            2'b11: change_sig = change3;
+    end
+
+endmodule
+
+
+
+
 
 
 
