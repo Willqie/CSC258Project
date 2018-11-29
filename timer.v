@@ -1,9 +1,9 @@
 module project(CLOCK_50, HEX0, HEX1, SW);
-    output [6:0] HEX0;
+    output [6:0] HEX0, HEX1;
     input CLOCK_50;
     input [9:0] SW;
 
-    wire increment， carry;
+    wire increment, carry;
     wire [3:0] hex_wire1, hex_wire2;
     second secondInstance(
         .fastclock(CLOCK_50),
@@ -97,7 +97,7 @@ module decimal_digit(clear, increment, x, carry);
 
     end
 
-    assign carry = (current_state == nine) ? 1 : 0;
+    assign carry = (current_state == zero) ? 1 : 0;
 endmodule
 
 module second(fastclock, resetn, signal);
