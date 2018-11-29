@@ -1144,6 +1144,7 @@ module change_sig_selector(fastclock, select, change_sig, resetn);
             2'b01: change_sig = change1;
             2'b10: change_sig = change2;
             2'b11: change_sig = change3;
+        endcase
     end
 
 endmodule
