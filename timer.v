@@ -1,10 +1,10 @@
-module project(CLOCK_50, HEX0, SW);
+module project(CLOCK_50, HEX0, HEX1, SW);
     output [6:0] HEX0;
     input CLOCK_50;
     input [9:0] SW;
 
-    wire increment;
-    wire [3:0] hex_wire;
+    wire increment， carry;
+    wire [3:0] hex_wire1, hex_wire2;
     second secondInstance(
         .fastclock(CLOCK_50),
         .resetn(SW[0]),
@@ -14,14 +14,25 @@ module project(CLOCK_50, HEX0, SW);
     decimal_digit dg(
         .clear(SW[0]),
         .increment(increment),
-        .x(hex_wire)
+        .x(hex_wire1),
+        .carry(carry)
     );
     
     hex hex0(
         .HEX(HEX0),
-        .x(hex_wire)
+        .x(hex_wire1)
     );
 
+    decimal_digit dg2(
+        .clear(SW[0]),
+        .increment(carry),
+        .x(hex_wire2)
+    );
+
+    hex hex1(
+        .HEX(HEX1),
+        .x(hex_wire2)
+    );
 
 
 
