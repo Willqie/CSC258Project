@@ -13,12 +13,15 @@ module project
 		VGA_SYNC_N,						//	VGA SYNC
 		VGA_R,   						//	VGA Red[9:0]
 		VGA_G,	 						//	VGA Green[9:0]
-		VGA_B   						//	VGA Blue[9:0]
+		VGA_B,   						//	VGA Blue[9:0]
+        HEX0,
+        HEX1
 	);
 
 	input			CLOCK_50;				//	50 MHz
 	input   [9:0]   SW;
 	input   [3:0]   KEY;
+	output [6:0] HEX0, HEX1;
 
 	// Declare your inputs and outputs here
 	// Do not change the following outputs
@@ -121,6 +124,8 @@ module project
     wire [2:0] colour1, colour2;
     wire writeEn1, writeEn2;
     wire change_pos;
+    wire [3:0] hex0wire, hex1wire; 
+    wire timerEnable, timerClear;
 
     trafficData td(
         .fastclock(CLOCK_50),
@@ -239,7 +244,9 @@ module project
         .clear_counter(clear_counter_clear),
         .win(win),
         .restart(~KEY[3]),
-        .is_collide(collide)
+        .is_collide(collide),
+        .timerClear(timerClear),
+        .timerEnable(timerEnable)
     );
 
     change_sig_selector change_sig_instance(
@@ -248,16 +255,27 @@ module project
         .change_sig(change_pos),
         .resetn(resetn)
     );
-	 
-	 timer(
-		.fastclock(CLOCK_50), 
-		.hex0(), 
-		.hex1(), 
-		.enable(), 
-		.resetn(resetn), 
-		.clear()
-		);
-		
+	
+
+	timer timerInstance(
+        .fastclock(CLOCK_50),
+        .hex0(hex0wire),
+        .hex1(hex1wire),
+        .enable(timerEnable),
+        .resetn(resetn),
+        .clear(timerClear)
+    );
+
+    hex hex0(
+        .HEX(HEX0),
+        .x(hex0wire)
+    );	
+
+    hex hex1(
+        .HEX(HEX1),
+        .x(hex1wire)
+    );
+
 endmodule
 
 module frogData(fastclock, resetn, up, down, left, right, x, y, counter_reset,
@@ -1196,10 +1214,12 @@ module clear_screen(fastclock, x, y, count_complete, clear_counter);
 endmodule
 
 //sigselect: 00 for game, 01 for win, 10 for clear_screen
-module game_control(fastclock, sig_select, count_complete, clear_counter, win, restart, is_collide);
+module game_control(fastclock, sig_select, count_complete, clear_counter, 
+win, restart, is_collide, timerClear, timerEnable);
     input fastclock, count_complete, win, restart, is_collide;
     output reg clear_counter;
     output reg [1:0] sig_select;
+    output reg timerClear, timerEnable;
 
     reg [3:0] current_state, next_state;
 
@@ -1238,12 +1258,23 @@ module game_control(fastclock, sig_select, count_complete, clear_counter, win, r
     begin enable_signals:
         clear_counter = 0;
         sig_select = 0;
+        timerClear = 0;
+        timerEnable = 1;
         case(current_state)
             s_play: sig_select = 2'b00;
-            s_win: sig_select = 2'b01;
-            s_clear_counter: clear_counter = 1;
+            s_win: begin 
+                sig_select = 2'b01;
+                timerEnable = 1'b0;
+            end
+            s_clear_counter: begin 
+                clear_counter = 1;
+                timerClear = 1'b1;
+            end
             s_clear_screen: sig_select = 2'b10;
-            s_lose: sig_select = 2'b11;
+            s_lose: begin
+                sig_select = 2'b11;
+                timerEnable = 1'b0;
+            end
         endcase
     end
 
@@ -1390,38 +1421,33 @@ endmodule
 
 module timer(fastclock, hex0, hex1, enable, resetn, clear);
     input fastclock, enable, resetn, clear;
-    output [6:0] hex0, hex1;
+    output [3:0] hex0, hex1;
     wire signal, carry;
-    timerSecond timer(
+    Second secondInstance(
         .fastclock(fastclock),
         .resetn(resetn),
         .signal(signal),
-        .enable(enable)
     );
 
     decimal_digit dg(
         .clear(clear),
         .increment(signal),
         .x(hex0),
-        .carry(carry)
+        .carry(carry),
+        .enable(enable)
     );
 
     decimal_digit dg2(
         .clear(clear),
         .increment(carry),
-        .x(hex1)
+        .x(hex1),
+        .enable(enable)
     );
-    
-
-
-    
-
-
 
 endmodule
 
-module decimal_digit(clear, increment, x, carry);
-    input clear, increment;
+module decimal_digit(clear, increment, x, carry, enable);
+    input clear, increment, enable;
     output reg [3:0] x;
     output carry;
 
@@ -1454,12 +1480,15 @@ module decimal_digit(clear, increment, x, carry);
         endcase
     end
 
-    always @(posedge increment, negedge clear)
+    always @(posedge increment, posedge clear)
     begin
-        if (!clear) 
+        if (clear) 
             current_state = zero;
-        else
-            current_state = next_state;
+        else begin
+            if (enable) begin
+                current_state = next_state;
+            end
+        end
     end
 
     always @(*)
@@ -1475,38 +1504,12 @@ module decimal_digit(clear, increment, x, carry);
             seven: x = 4'd7;
             eight: x = 4'd8;
             nine:  x = 4'd9;
-			endcase
+		endcase
 
     end
 
     assign carry = (current_state == zero) ? 1 : 0;
 endmodule
-
-// Traffic should move every half second
-module timerSecond(fastclock, resetn, signal, enable);
-    input fastclock, resetn, enable;
-    output reg signal;
-
-    reg [25:0] counter;
-
-    always @(posedge fastclock)
-    begin
-        if (!resetn || !enable)
-            counter <= 26'd50_000_000;
-        else begin
-            if (counter == 0) begin
-                counter <= 26'd50_000_000;
-                signal <= 1'b1;
-            end
-            else begin
-                counter <= counter - 1;
-                signal <= 1'b0;
-            end
-        end
-    end
-
-endmodule
-
 
 module hex(HEX, x);
     input [3:0] x;

@@ -72,9 +72,9 @@ module decimal_digit(clear, increment, x, carry);
         endcase
     end
 
-    always @(posedge increment, negedge clear)
+    always @(posedge increment, posedge clear)
     begin
-        if (!clear) 
+        if (clear) 
             current_state = zero;
         else
             current_state = next_state;
