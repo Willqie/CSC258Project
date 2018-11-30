@@ -981,7 +981,7 @@ module youlose_data(fastclock, resetn, xout, yout, colourOut
             q9 <= 16'b1001_0100_1000_0100;
             q10 <= 16'b1001_0100_0110_0111;
             q11 <= 16'b1001_0100_0010_0100;
-            q12 <= 16'b1000_1000_1110_0111;
+            q12 <= 16'b1100_1000_1110_0111;
             q13 <= 16'b0;
             q14 <= 16'b0;
             q15 <= 16'b0;
@@ -1197,14 +1197,15 @@ module game_control(fastclock, sig_select, count_complete, clear_counter, win, r
                s_win           = 4'd1,
                s_clear_screen  = 4'd2,
                s_clear_counter = 4'd3,
-               s_lose          = 4'd4;
+               s_lose          = 4'd4,
+               s_inter         = 4'd5;
     
     always @(*)
     begin
         case(current_state)
             s_play: begin
                 if (is_collide) begin
-                    next_state = s_lose;
+                    next_state = s_inter;
                 end
                 else if (win) begin
                     next_state = s_win;
@@ -1219,6 +1220,7 @@ module game_control(fastclock, sig_select, count_complete, clear_counter, win, r
             s_clear_screen: next_state = count_complete ? s_play : s_clear_screen;
             // There may be a bug?
             s_lose: next_state = restart ? s_clear_counter : s_lose;
+            s_inter: next_state = restart ? s_inter : s_lose;
         endcase
     end
 
@@ -1376,6 +1378,232 @@ module change_sig_selector(fastclock, select, change_sig, resetn);
 
 endmodule
 
+module timer(fastclock, hex0, hex1, enable, resetn, clear);
+    input fastclock, enable, resetn, clear;
+    output [6:0] hex0, hex1;
+    wire signal, carry;
+    timerSecond timer(
+        .fastclock(fastclock),
+        .resetn(resetn),
+        .signal(signal),
+        .enable(enable)
+    );
+
+    decimal_digit dg(
+        .clear(clear),
+        .increment(signal),
+        .x(hex0),
+        .carry(carry)
+    );
+
+    decimal_digit dg2(
+        .clear(clear),
+        .increment(carry),
+        .x(hex1)
+    );
+    
+
+
+    
+
+
+
+endmodule
+
+module decimal_digit(clear, increment, x, carry);
+    input clear, increment;
+    output reg [3:0] x;
+    output carry;
+
+    localparam zero  = 4'd0,
+               one   = 4'd1,
+               two   = 4'd2,
+               three = 4'd3,
+               four  = 4'd4,
+               five  = 4'd5,
+               six   = 4'd6,
+               seven = 4'd7,
+               eight = 4'd8,
+               nine  = 4'd9;
+    
+    reg [3:0] current_state, next_state;
+
+    always @(*)
+    begin
+        case(current_state)
+            zero:  next_state = one;
+            one:   next_state = two;
+            two:   next_state = three;
+            three: next_state = four;
+            four:  next_state = five;
+            five:  next_state = six;
+            six:   next_state = seven;
+            seven: next_state = eight;
+            eight: next_state = nine;
+            nine:  next_state = zero;
+        endcase
+    end
+
+    always @(posedge increment, negedge clear)
+    begin
+        if (!clear) 
+            current_state = zero;
+        else
+            current_state = next_state;
+    end
+
+    always @(*)
+    begin
+        case(current_state)
+            zero:  x = 4'd0;
+            one:   x = 4'd1;
+            two:   x = 4'd2;
+            three: x = 4'd3;
+            four:  x = 4'd4;
+            five:  x = 4'd5;
+            six:   x = 4'd6;
+            seven: x = 4'd7;
+            eight: x = 4'd8;
+            nine:  x = 4'd9;
+			endcase
+
+    end
+
+    assign carry = (current_state == zero) ? 1 : 0;
+endmodule
+
+// Traffic should move every half second
+module timerSecond(fastclock, resetn, signal, enable);
+    input fastclock, resetn, enable;
+    output reg signal;
+
+    reg [25:0] counter;
+
+    always @(posedge fastclock)
+    begin
+        if (!resetn || !enable)
+            counter <= 26'd50_000_000;
+        else begin
+            if (counter == 0) begin
+                counter <= 26'd50_000_000;
+                signal <= 1'b1;
+            end
+            else begin
+                counter <= counter - 1;
+                signal <= 1'b0;
+            end
+        end
+    end
+
+endmodule
+
+
+module hex(HEX, x);
+    input [3:0] x;
+    output [6: 0] HEX;
+
+    Hex0 h0(
+        .y(HEX[0]),
+        .c3(x[3]),
+        .c2(x[2]),
+        .c1(x[1]),
+        .c0(x[0])
+    );
+    Hex1 h1(
+        .y(HEX[1]),
+        .c3(x[3]),
+        .c2(x[2]),
+        .c1(x[1]),
+        .c0(x[0])
+    );
+    Hex2 h2(
+        .y(HEX[2]),
+        .c3(x[3]),
+        .c2(x[2]),
+        .c1(x[1]),
+        .c0(x[0])
+    );
+    Hex3 h3(
+        .y(HEX[3]),
+        .c3(x[3]),
+        .c2(x[2]),
+        .c1(x[1]),
+        .c0(x[0])
+    );
+    Hex4 h4(
+        .y(HEX[4]),
+        .c3(x[3]),
+        .c2(x[2]),
+        .c1(x[1]),
+        .c0(x[0])
+    );
+    Hex5 h5(
+        .y(HEX[5]),
+        .c3(x[3]),
+        .c2(x[2]),
+        .c1(x[1]),
+        .c0(x[0])
+    );
+    Hex6 h6(
+        .y(HEX[6]),
+        .c3(x[3]),
+        .c2(x[2]),
+        .c1(x[1]),
+        .c0(x[0])
+    );
+
+
+endmodule
+
+
+
+module Hex0(y, c3, c2, c1, c0);
+    output y;
+    input c3, c2, c1, c0;
+    assign y = ~((c1 & ~c0) | (~c3 & c1) | (c3 & ~c1 & ~c0) | (c0 & ~c3 & c2) | (~c2 & ~c1 & ~c0) | (c1 & c3 & c2) | (~c1 & c3 & ~c2));
+
+endmodule
+
+module Hex1(y, c3, c2, c1, c0);
+    output y;
+    input c3, c2, c1, c0;
+    assign y = ~((~c3 & ~c2) | ( ~c1 & ~c2) | (~c2 & c1 & ~c0) | (~c3 & c1 & c0) | (c3 & c0 & ~c1) | ( ~c3 & ~c1 & ~c0));
+
+endmodule
+
+module Hex2(y, c3, c2, c1, c0);
+    output y;
+    input c3, c2, c1, c0;
+    assign y = ~(~c1 & c0 | ~c3 & c2 | c3 & ~c2 | ~c1 & ~c3 | ~c3 & c0);
+endmodule
+
+module Hex3(y, c3, c2, c1, c0);
+    output y;
+    input c3, c2, c1, c0;
+    assign y = ~(c3 & ~c1 & ~c0 | ~c1 & c2 & c0 | c1 & ~c3 & ~c2 | c2 & c1 & ~c0 | ~c2 & c1 & c0 | ~c2 & ~c1 & ~c0);
+
+endmodule
+
+module Hex4(y, c3, c2, c1, c0);
+    output y;
+    input c3, c2, c1, c0;
+    assign y = ~(c1 & ~c0 | c3 & c2 | c1 & c3 | ~c2 & ~c1 & ~c0);
+
+endmodule
+
+module Hex5(y, c3, c2, c1, c0);
+    output y;
+    input c3, c2, c1, c0;
+    assign y =~( ~c1 & ~c0 | c3 & ~c2 | ~c0 & c2 & c1 | c1 & c2 & c3 | c2 & ~c1 & ~c3);
+
+endmodule
+
+module Hex6(y, c3, c2, c1, c0);
+    output y;
+    input c3, c2, c1, c0;
+    assign y = ~(c3 & ~c2 | c1 & ~c0 | c0 & c3 | ~c3 & c2 & ~c1 | c1 & ~c3 & ~c2);
+
+endmodule
 
 
 
