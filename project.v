@@ -153,10 +153,11 @@ module project
         .writeEn(writeEn2),
         .xpos(xpos)
     );
-    wire [7:0] x_notwin, x_win, x_clear;
-    wire [6:0] y_notwin, y_win, y_clear;
-    wire [2:0] colour_notwin, colour_win;
+    wire [7:0] x_notwin, x_win, x_clear, x_lose;
+    wire [6:0] y_notwin, y_win, y_clear, y_lose;
+    wire [2:0] colour_notwin, colour_win, colour_lose;
     wire writeEn_notwin, writeEn_win, clear_counter_clear, count_complete_clear;
+    wire writeEn_lose;
     wire [1:0] sig_select;
     
     signalSwitch(
@@ -194,6 +195,10 @@ module project
         .y3(y_clear),
         .colour3(3'b000),
         .writeEn3(1'b1),
+        .x4(x_lose),
+        .y4(y_lose),
+        .colour4(colour_lose),
+        .writeEn4(writeEn_lose),
         .x(x),
         .y(y),
         .writeEn(writeEn),
@@ -210,6 +215,15 @@ module project
         .writeEn(writeEn_win)
     );
 
+    youlose youloseInstance(
+        .fastclock(CLOCK_50),
+        .resetn(resetn),
+        .x(x_lose),
+        .y(y_lose),
+        .colourOut(colour_lose),
+        .writeEn(writeEn_lose)
+    );
+
     clear_screen clear_screen_instance(
         .fastclock(CLOCK_50),
         .x(x_clear),
@@ -223,7 +237,9 @@ module project
         .sig_select(sig_select),
         .count_complete(count_complete_clear),
         .clear_counter(clear_counter_clear),
-        .win(win)
+        .win(win),
+        .restart(~KEY[3]),
+        .is_collide(collide)
     );
 
     change_sig_selector change_sig_instance(
@@ -742,6 +758,41 @@ module youwin(fastclock, resetn, x, y, colourOut, writeEn);
     );
 endmodule
 
+module youlose(fastclock, resetn, x, y, colourOut, writeEn);
+    input fastclock, resetn;
+    output [7:0] x;
+    output [6:0] y;
+    output [2:0] colourOut;
+    output writeEn;
+    wire count_complete, clear_counter, incr_x, incr_y, load;
+    wire [3:0] xpos; 
+
+    youlose_data data(
+        .fastclock(fastclock),
+        .resetn(resetn),
+        .xout(x),
+        .yout(y),
+        .colourOut(colourOut),
+        .count_complete(count_complete),
+        .clear_counter(clear_counter),
+        .incr_x(incr_x),
+        .incr_y(incr_y),
+        .load(load),
+        .xpos(xpos)
+    );
+
+    control_win control(
+        .fastclock(fastclock),
+        .xpos(xpos),
+        .resetn(resetn),
+        .incr_x(incr_x),
+        .incr_y(incr_y),
+        .clear_counter(clear_counter),
+        .load(load),
+        .writeEn(writeEn),
+        .count_complete(count_complete)
+    );
+endmodule
 module youwin_data(fastclock, resetn, xout, yout, colourOut
 , count_complete, clear_counter, incr_x, incr_y, load, xpos);
     input fastclock, incr_x, incr_y, resetn, clear_counter, load;
@@ -771,12 +822,160 @@ module youwin_data(fastclock, resetn, xout, yout, colourOut
             q4 <= 16'b0010_0001_0100_1001;
             q5 <= 16'b0010_0000_1000_0110;
             q6 <= 16'b0;
-            // q7 <= 16'b1001_0010_0100_1001;
-            // q8 <= 16'b1001_0010_0100_1001;
-            // q9 <= 16'b1001_0010_0100_1101;
-            // q10 <= 16'b1001_0010_0100_1011;
-            // q11 <= 16'b1001_0010_0100_1001;
-            // q12 <= 16'b0110_1100_0100_1001;
+            q7 <= 16'b1001_0010_0100_1001;
+            q8 <= 16'b1001_0010_0100_1001;
+            q9 <= 16'b1001_0010_0100_1101;
+            q10 <= 16'b1001_0010_0100_1011;
+            q11 <= 16'b1001_0010_0100_1001;
+            q12 <= 16'b0110_1100_0100_1001;
+            q13 <= 16'b0;
+            q14 <= 16'b0;
+            q15 <= 16'b0;
+        end
+        if (load) begin
+            xcoor <= xpos * 10;
+            ycoor <= ypos * 7;
+            if(ypos == 4'd0) begin
+                if (q0[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd1) begin
+                if (q1[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd2) begin
+                if (q2[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd3) begin
+                if (q3[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd4) begin
+                if (q4[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd5) begin
+                if (q5[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd6) begin
+                if (q6[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd7) begin
+                if (q7[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd8) begin
+                if (q8[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd9) begin
+                if (q9[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd10) begin
+                if (q10[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd11) begin
+                if (q11[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd12) begin
+                if (q12[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd13) begin
+                if (q13[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd14) begin
+                if (q14[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+            if(ypos == 4'd15) begin
+                if (q15[4'd15 - xpos] == 1'b1)
+                    colourOut <= 3'b110;
+                else
+                    colourOut <= 3'b000;
+            end
+        end
+        if (incr_x)
+            xpos <= xpos + 1;
+        if (incr_y)
+            ypos <= ypos + 1;
+        if (clear_counter) 
+            counter <= 6'b0;
+        else 
+            counter <= counter + 1'b1;
+    end
+
+    assign count_complete = (counter == 6'b1111_11) ? 1 : 0;
+    assign xout = xcoor + counter[2:0];
+    assign yout = ycoor + counter[5:3];
+endmodule
+
+module youlose_data(fastclock, resetn, xout, yout, colourOut
+, count_complete, clear_counter, incr_x, incr_y, load, xpos);
+    input fastclock, incr_x, incr_y, resetn, clear_counter, load;
+    output count_complete;
+    output [7:0] xout;
+    output [6:0] yout;
+    output reg [2:0] colourOut;
+
+    reg [15:0] q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15;
+
+    output reg [3:0] xpos;
+    reg [3:0] ypos;
+    reg [7:0] xcoor;
+    reg [6:0] ycoor;
+    reg [5:0] counter;
+
+    always @(posedge fastclock)
+    begin
+        if (!resetn) begin
+            xpos <= 4'b0;
+            ypos <= 4'b0;
+            counter <= 6'b0;
+            q0 <= 16'b1000_1000_1000_1001;
+            q1 <= 16'b1000_1001_0100_1001;
+            q2 <= 16'b0101_0001_0100_1001;
+            q3 <= 16'b0010_0001_0100_1001;
+            q4 <= 16'b0010_0001_0100_1001;
+            q5 <= 16'b0010_0000_1000_0110;
+            q6 <= 16'b0;
             q7 <= 16'b1000_1000_1110_0111;
             q8 <= 16'b1001_0100_1000_0100;
             q9 <= 16'b1001_0100_1000_0100;
@@ -902,6 +1101,7 @@ module youwin_data(fastclock, resetn, xout, yout, colourOut
     assign yout = ycoor + counter[5:3];
 endmodule
 
+
 module control_win(fastclock, xpos, resetn, incr_x, incr_y,
 clear_counter, load, writeEn, count_complete);
     input fastclock, resetn, count_complete;
@@ -986,8 +1186,8 @@ module clear_screen(fastclock, x, y, count_complete, clear_counter);
 endmodule
 
 //sigselect: 00 for game, 01 for win, 10 for clear_screen
-module game_control(fastclock, sig_select, count_complete, clear_counter, win);
-    input fastclock, count_complete, win;
+module game_control(fastclock, sig_select, count_complete, clear_counter, win, restart, is_collide);
+    input fastclock, count_complete, win, restart, is_collide;
     output reg clear_counter;
     output reg [1:0] sig_select;
 
@@ -996,15 +1196,29 @@ module game_control(fastclock, sig_select, count_complete, clear_counter, win);
     localparam s_play          = 4'd0,
                s_win           = 4'd1,
                s_clear_screen  = 4'd2,
-               s_clear_counter = 4'd3;
+               s_clear_counter = 4'd3,
+               s_lose          = 4'd4;
     
     always @(*)
     begin
         case(current_state)
-            s_play: next_state = win ? s_win : s_play;
+            s_play: begin
+                if (is_collide) begin
+                    next_state = s_lose;
+                end
+                else if (win) begin
+                    next_state = s_win;
+                end
+                else begin
+                    next_state = s_play;
+                end
+            
+            end
             s_win: next_state = win ? s_win: s_clear_counter;
             s_clear_counter: next_state = s_clear_screen;
             s_clear_screen: next_state = count_complete ? s_play : s_clear_screen;
+            // There may be a bug?
+            s_lose: next_state = restart ? s_clear_counter : s_lose;
         endcase
     end
 
@@ -1017,6 +1231,7 @@ module game_control(fastclock, sig_select, count_complete, clear_counter, win);
             s_win: sig_select = 2'b01;
             s_clear_counter: clear_counter = 1;
             s_clear_screen: sig_select = 2'b10;
+            s_lose: sig_select = 2'b11;
         endcase
     end
 
@@ -1027,13 +1242,13 @@ module game_control(fastclock, sig_select, count_complete, clear_counter, win);
 
 endmodule
 
-// 1 for game signal, 2 for win signal, 3 for clear_screen
+// 1 for game signal, 2 for win signal, 3 for clear_screen, 4 for you lose
 module signal_selector(x1, y1, colour1, writeEn1, x2, y2, colour2, writeEn2,
-x3, y3, colour3, writeEn3, x, y, colour, writeEn, sig_select);
-    input [7:0] x1, x2, x3;
-    input [6:0] y1, y2, y3;
-    input [2:0] colour1, colour2, colour3;
-    input writeEn1, writeEn2, writeEn3;
+x3, y3, colour3, writeEn3, x4, y4, colour4, writeEn4, x, y, colour, writeEn, sig_select);
+    input [7:0] x1, x2, x3, x4;
+    input [6:0] y1, y2, y3, y4;
+    input [2:0] colour1, colour2, colour3, colour4;
+    input writeEn1, writeEn2, writeEn3, writeEn4;
     output reg [7:0] x;
     output reg [6:0] y;
     output reg [2:0] colour;
@@ -1060,6 +1275,12 @@ x3, y3, colour3, writeEn3, x, y, colour, writeEn, sig_select);
                 y = y3;
                 colour = colour3;
                 writeEn = writeEn3;
+            end
+            2'b11: begin
+                x = x4;
+                y = y4;
+                colour = colour4;
+                writeEn = writeEn4;
             end
 		endcase
     end
