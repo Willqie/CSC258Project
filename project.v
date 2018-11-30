@@ -248,6 +248,16 @@ module project
         .change_sig(change_pos),
         .resetn(resetn)
     );
+	 
+	 timer(
+		.fastclock(CLOCK_50), 
+		.hex0(), 
+		.hex1(), 
+		.enable(), 
+		.resetn(resetn), 
+		.clear()
+		);
+		
 endmodule
 
 module frogData(fastclock, resetn, up, down, left, right, x, y, counter_reset,
@@ -991,97 +1001,97 @@ module youlose_data(fastclock, resetn, xout, yout, colourOut
             ycoor <= ypos * 7;
             if(ypos == 4'd0) begin
                 if (q0[4'd15 - xpos] == 1'b1)
-                    colourOut <= 3'b110;
+                    colourOut <= 3'b100;
                 else
                     colourOut <= 3'b000;
             end
             if(ypos == 4'd1) begin
                 if (q1[4'd15 - xpos] == 1'b1)
-                    colourOut <= 3'b110;
+                    colourOut <= 3'b100;
                 else
                     colourOut <= 3'b000;
             end
             if(ypos == 4'd2) begin
                 if (q2[4'd15 - xpos] == 1'b1)
-                    colourOut <= 3'b110;
+                    colourOut <= 3'b100;
                 else
                     colourOut <= 3'b000;
             end
             if(ypos == 4'd3) begin
                 if (q3[4'd15 - xpos] == 1'b1)
-                    colourOut <= 3'b110;
+                    colourOut <= 3'b100;
                 else
                     colourOut <= 3'b000;
             end
             if(ypos == 4'd4) begin
                 if (q4[4'd15 - xpos] == 1'b1)
-                    colourOut <= 3'b110;
+                    colourOut <= 3'b100;
                 else
                     colourOut <= 3'b000;
             end
             if(ypos == 4'd5) begin
                 if (q5[4'd15 - xpos] == 1'b1)
-                    colourOut <= 3'b110;
+                    colourOut <= 3'b100;
                 else
                     colourOut <= 3'b000;
             end
             if(ypos == 4'd6) begin
                 if (q6[4'd15 - xpos] == 1'b1)
-                    colourOut <= 3'b110;
+                    colourOut <= 3'b100;
                 else
                     colourOut <= 3'b000;
             end
             if(ypos == 4'd7) begin
                 if (q7[4'd15 - xpos] == 1'b1)
-                    colourOut <= 3'b110;
+                    colourOut <= 3'b100;
                 else
                     colourOut <= 3'b000;
             end
             if(ypos == 4'd8) begin
                 if (q8[4'd15 - xpos] == 1'b1)
-                    colourOut <= 3'b110;
+                    colourOut <= 3'b100;
                 else
                     colourOut <= 3'b000;
             end
             if(ypos == 4'd9) begin
                 if (q9[4'd15 - xpos] == 1'b1)
-                    colourOut <= 3'b110;
+                    colourOut <= 3'b100;
                 else
                     colourOut <= 3'b000;
             end
             if(ypos == 4'd10) begin
                 if (q10[4'd15 - xpos] == 1'b1)
-                    colourOut <= 3'b110;
+                    colourOut <= 3'b100;
                 else
                     colourOut <= 3'b000;
             end
             if(ypos == 4'd11) begin
                 if (q11[4'd15 - xpos] == 1'b1)
-                    colourOut <= 3'b110;
+                    colourOut <= 3'b100;
                 else
                     colourOut <= 3'b000;
             end
             if(ypos == 4'd12) begin
                 if (q12[4'd15 - xpos] == 1'b1)
-                    colourOut <= 3'b110;
+                    colourOut <= 3'b100;
                 else
                     colourOut <= 3'b000;
             end
             if(ypos == 4'd13) begin
                 if (q13[4'd15 - xpos] == 1'b1)
-                    colourOut <= 3'b110;
+                    colourOut <= 3'b100;
                 else
                     colourOut <= 3'b000;
             end
             if(ypos == 4'd14) begin
                 if (q14[4'd15 - xpos] == 1'b1)
-                    colourOut <= 3'b110;
+                    colourOut <= 3'b100;
                 else
                     colourOut <= 3'b000;
             end
             if(ypos == 4'd15) begin
                 if (q15[4'd15 - xpos] == 1'b1)
-                    colourOut <= 3'b110;
+                    colourOut <= 3'b100;
                 else
                     colourOut <= 3'b000;
             end
